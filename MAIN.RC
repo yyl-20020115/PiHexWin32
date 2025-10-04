@@ -1,5 +1,5 @@
 #include <windows.h>
-#include "Main.h"
+#include "Resources.h"
 
 AppIcon ICON PiHex.ico
 BlackIcon ICON Black.ico

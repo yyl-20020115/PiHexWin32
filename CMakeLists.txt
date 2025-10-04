@@ -14,6 +14,7 @@ set(SOURCES
     CPUID.asm
     MAIN.H
     MAIN.C
+    RESOURCES.h
     MAIN.RC
     PIHEX.C
     PIHEX.H

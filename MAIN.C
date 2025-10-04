@@ -10,18 +10,19 @@ purposes only, unless permission is obtained from the author.
 #include "Cpuid.h"
 #include <intrin.h>
 #pragma intrinsic(__rdtsc)
+
 char AppClass[] = sAppClass;
 char AppName[] = sAppName;
 char IniFileName[256];
 
-LRESULT  CALLBACK WindowProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK WindowProc(HWND, UINT, WPARAM, LPARAM);
 
 // Taken from prime.exe
-static  char* NEAR lines[NumLines] = { 0 };
-static  char    NEAR linebuf[NumLines * LineLength];
-static  int     NEAR charHeight = 0;
-void FAR PASCAL OutputStr(HWND hWnd, LPSTR str);
-void FAR PASCAL LineFeed(HWND hWnd);
+static  char*  lines[NumLines] = { 0 };
+static  char     linebuf[NumLines * LineLength];
+static  int      charHeight = 0;
+void  PASCAL OutputStr(HWND hWnd, LPSTR str);
+void  PASCAL LineFeed(HWND hWnd);
 
 HANDLE hCalcThread[MAXTHREADS];
 DWORD CalcThreadId[MAXTHREADS];
@@ -465,7 +466,7 @@ void TrayMessage(UINT message, LPCSTR prompt, HWND hwnd, UINT Icon)
 		if (TrayTimer) { KillTimer(hwnd, TrayTimer); TrayTimer = 0; }
 }
 
-BOOL FAR PASCAL About(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+BOOL  PASCAL About(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:return(TRUE);
@@ -479,7 +480,7 @@ BOOL FAR PASCAL About(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return (FALSE);
 }
 
-BOOL FAR PASCAL Priority(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+BOOL  PASCAL Priority(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -866,7 +867,7 @@ void spoolmsg(char* dat)
 	fclose(f);
 }
 
-BOOL FAR PASCAL ProxyInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+BOOL  PASCAL ProxyInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	char cbuf[128];
 
@@ -903,7 +904,7 @@ BOOL FAR PASCAL ProxyInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 
-BOOL FAR PASCAL CpuInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+BOOL  PASCAL CpuInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	char cbuf[128];
 	DLGPROC lpProc;
@@ -1734,7 +1735,7 @@ int WINAPI WinMain(HINSTANCE this_inst, HINSTANCE prev_inst, LPSTR cmdline, int 
 /*                      Output Text to Main Window                       */
 /*************************************************************************/
 
-void FAR PASCAL LineFeed(
+void  PASCAL LineFeed(
 	HWND    hWnd)
 {
 	char* p;
@@ -1757,7 +1758,7 @@ void FAR PASCAL LineFeed(
 	UpdateWindow(hWnd);
 }
 
-void FAR PASCAL OutputStr(
+void  PASCAL OutputStr(
 	HWND    hWnd,
 	LPSTR   str)
 {

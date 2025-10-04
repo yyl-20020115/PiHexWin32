@@ -45,7 +45,7 @@ extern long communicating;
 extern long cont;
 
 extern HWND mainHwnd;
-extern void FAR PASCAL OutputStr (
+extern void  PASCAL OutputStr (
         HWND    hWnd,
         LPSTR   str);
 

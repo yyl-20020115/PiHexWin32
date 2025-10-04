@@ -1,6 +1,6 @@
 #pragma once
-#define MAXTHREADS         256
-#define ThreadDataSize       768
+#define MAXTHREADS			256
+#define ThreadDataSize		768
 
 #ifdef DEBUG
 #define sAppClass            "PiHexDbgClass"
