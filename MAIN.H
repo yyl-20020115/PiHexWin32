@@ -45,16 +45,10 @@ void __pascal calc_thread_init(LPVOID dat);
 
 void __pascal calc_thread_done(LPVOID dat);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 #ifndef CALC_THREAD_DOWORK
 #define calc_thread_dowork CALC_THREAD_DOWORK
 #endif
-	void __pascal calc_thread_dowork(LPVOID dat);
-#ifdef __cplusplus
-}
-#endif
+void __pascal calc_thread_dowork(LPVOID dat);
 
 // These functions get passed the location of a region of memory of size
 // ThreadDatSize. The first doubleword serves two purposes: first, it
@@ -67,7 +61,7 @@ extern "C" {
 
 extern void pihex_dropout(void);
 
-extern void spoolmsg(char *dat);
+extern void spoolmsg(char* dat);
 // Provided by main.c;  writes a message to the spool file.
 
 extern void request_communication(long startcomputing, long forceattempt);

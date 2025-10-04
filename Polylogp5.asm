@@ -62,14 +62,14 @@ _POWMODDATA ENDS
 
 
 _TEXT32 SEGMENT USE32 PUBLIC 'CODE'
-EXTRN __overheat_err:DWORD
+EXTRN _overheat_err:DWORD
 
-EXTRN __where:QWORD
-EXTRN __m_start_pos:QWORD
-EXTRN __progress:QWORD
-EXTRN __m_end_pos:QWORD
-EXTRN __fracdone:DWORD
-EXTRN __numclocks:DWORD
+EXTRN _where:QWORD
+EXTRN _m_start_pos:QWORD
+EXTRN _progress:QWORD
+EXTRN _m_end_pos:QWORD
+EXTRN _fracdone:DWORD
+EXTRN _numclocks:DWORD
 
 PUBLIC POLYLOGCONVOUT_P5
 POLYLOGCONVOUT_P5:
@@ -196,7 +196,7 @@ sub ecx,03FFEh      ;26v    ecx=002E
 cmp ecx,64
 jbe not_overheat
 
-mov __overheat_err, 1
+mov _overheat_err, 1
 jmp exit_powmod
 
 not_overheat:

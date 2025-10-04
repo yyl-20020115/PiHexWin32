@@ -3,21 +3,21 @@ project(PiHex)
 
 enable_language(C ASM_MASM)
 
-# Set output directories
-#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+message(STATUS "SINCE THE ASSEMBLY FILE CONTAINS X86 INSTRUCTIONS ONLY AND YOU CAN NOT COMPILE WITH ML64.EXE!")
+message(STATUS "YOU HAVE TO ALWAYS BUILD WITH WIN32 CONFIGURATION!")
 
 # Add source files
 set(SOURCES
-    BLACK.ICO
-    PIHEX.ICO
-    CPUID.H
+    BLACK.ico
+    PIHEX.ico
+    CPUID.h
     CPUID.asm
-    MAIN.H
-    MAIN.C
+    MAIN.h
+    MAIN.c
     RESOURCES.h
-    MAIN.RC
-    PIHEX.C
-    PIHEX.H
+    MAIN.rc
+    PIHEX.c
+    PIHEX.h
     POLYLOG.asm
     Polylogp5.asm
     Polylogp6.asm
@@ -25,9 +25,8 @@ set(SOURCES
 
 # Add executable
 add_executable(PiHex WIN32 ${SOURCES})
-#set_target_properties(PiHex PROPERTIES LINKER_LANGUAGE C)
 target_link_libraries(PiHex PRIVATE ws2_32)
-target_compile_options(PiHex PRIVATE "/GS-")
+#target_compile_options(PiHex PRIVATE "/GS-")
 target_link_options(PiHex PRIVATE "/SAFESEH:NO")
 # Include directories
 target_include_directories(PiHex PRIVATE  ${CMAKE_SOURCE_DI}/)

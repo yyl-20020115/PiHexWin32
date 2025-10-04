@@ -30,16 +30,16 @@ _POWMODDATA ENDS
 
 
 _TEXT32 SEGMENT USE32 PUBLIC 'CODE'
-EXTRN __overheat_err:DWORD
-EXTRN __where:QWORD
-EXTRN __m_start_pos:QWORD
-EXTRN __progress:QWORD
-EXTRN __m_end_pos:QWORD
-EXTRN __fracdone:DWORD
-EXTRN __numclocks:DWORD
+EXTRN _overheat_err:DWORD
+EXTRN _where:QWORD
+EXTRN _m_start_pos:QWORD
+EXTRN _progress:QWORD
+EXTRN _m_end_pos:QWORD
+EXTRN _fracdone:DWORD
+EXTRN _numclocks:DWORD
 
-EXTRN __CPUVENDOR:DWORD
-EXTRN __CPUTYPE:BYTE
+EXTRN _CPUVENDOR:DWORD
+EXTRN _CPUTYPE:BYTE
 
 CPU_INTEL EQU 0
 CPU_AMD EQU 1
@@ -57,9 +57,9 @@ EXTRN POLYLOGCONVOUT_P6:PROC
 
 PUBLIC _POWERINIT@0
 _POWERINIT@0:
-cmp __CPUVENDOR,CPU_INTEL
+cmp _CPUVENDOR,CPU_INTEL
 jne PI_NI
-cmp byte ptr __CPUTYPE,5
+cmp byte ptr _CPUTYPE,5
 jne PI_NI
 jmp POWERINIT_P5                 ; Intel Pentium use Pentium code
 PI_NI:                          ; Everything else use P6 code
@@ -67,9 +67,9 @@ jmp POWERINIT_P6
 
 PUBLIC _CALC_THREAD_DOWORK@4
 _CALC_THREAD_DOWORK@4:
-cmp __CPUVENDOR,CPU_INTEL
+cmp _CPUVENDOR,CPU_INTEL
 jne CT_NI
-cmp byte ptr __CPUTYPE,5
+cmp byte ptr _CPUTYPE,5
 jne CT_NI
 jmp CALC_THREAD_DOWORK_P5        ; Intel Pentium use Pentium code
 CT_NI:                          ; Everything else use P6 code
@@ -77,9 +77,9 @@ jmp CALC_THREAD_DOWORK_P6
 
 PUBLIC _POLYLOGCONVOUT@4
 _POLYLOGCONVOUT@4:
-cmp __CPUVENDOR,CPU_INTEL
+cmp _CPUVENDOR,CPU_INTEL
 jne PL_NI
-cmp byte ptr __CPUTYPE,5
+cmp byte ptr _CPUTYPE,5
 jne PL_NI
 jmp POLYLOGCONVOUT_P5            ; Intel Pentium use Pentium code
 PL_NI:                          ; Everything else use P6 code
@@ -87,19 +87,19 @@ jmp POLYLOGCONVOUT_P6
 
 PUBLIC _calcfracdone
 _calcfracdone:
-        fild __progress
-        fild __m_start_pos
+        fild _progress
+        fild _m_start_pos
         fld st(0)
         fxch st(2)
         fsubr
         fxch st(1)
-        fild  __m_end_pos
+        fild  _m_end_pos
         fsubr
         fdiv
         fmul fc100
-        fstp __fracdone
-        fild __where
-        fild __progress
+        fstp _fracdone
+        fild _where
+        fild _progress
         fmul fc5
         fsub
         fstp calcfractemp
@@ -109,7 +109,7 @@ _calcfracdone:
         imul eax,109011
         add eax,108409
         shr eax,8
-        mov __numclocks,eax
+        mov _numclocks,eax
         retn
 
         _TEXT32 ENDS

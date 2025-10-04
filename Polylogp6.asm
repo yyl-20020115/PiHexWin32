@@ -15,8 +15,8 @@ _POWMODDATA ENDS
 
 
 _TEXT32 SEGMENT USE32 PUBLIC 'CODE'
-EXTRN __overheat_err:DWORD
-EXTRN __where:QWORD
+EXTRN _overheat_err:DWORD
+EXTRN _where:QWORD
 
 
 
@@ -108,7 +108,7 @@ pftloop:
 cmp ecx,64
 jbe not_overheat
 
-mov __overheat_err, 1
+mov _overheat_err, 1
 finit
 jmp exit_powmod
 

@@ -84,8 +84,7 @@ unsigned __stdcall CalcThread(LPVOID threaddat);
 void MakeService95(void);
 void SetRegistry(void);
 
-float fild(void);           //convert from int64 to float
-#pragma aux fild = "fild qword int64";
+//float fild(void);           //convert from int64 to float
 
 struct thdat {
 	long threadnum;
@@ -1631,8 +1630,8 @@ void MakeService95(void)
 	proc = (DWORD(__stdcall*)(DWORD, DWORD)) GetProcAddress(hlib, "RegisterServiceProcess");
 	if (proc == NULL) OutputStr(mainHwnd, "Unable to find RegisterServiceProcess\n");
 	else {
-		if (service) rc = (*proc)(NULL, 1);
-		else rc = (*proc)(NULL, 0);
+		if (service) rc = (*proc)(0, 1);
+		else rc = (*proc)(0, 0);
 		if (!rc) OutputStr(mainHwnd, "RegisterServiceProcess failed\n");
 	}
 	FreeLibrary(hlib);
@@ -1721,7 +1720,7 @@ int WINAPI WinMain(HINSTANCE this_inst, HINSTANCE prev_inst, LPSTR cmdline, int 
 
 	UpdateWindow(hwnd);
 
-	while (GetMessage(&msg, NULL, NULL, NULL)) {
+	while (GetMessage(&msg, NULL, 0, 0)) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
