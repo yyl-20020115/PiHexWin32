@@ -19,7 +19,7 @@ char timesfn[] = "pitimes.txt";
 #define calc_progress CALC_PROGRESS
 #endif
 
-extern void __pascal calc_progress(struct threaddat* dat);
+extern void PASCAL calc_progress(struct threaddat* dat);
 
 extern DWORD _overheat_err = 0;
 
@@ -42,27 +42,27 @@ extern long communicating;
 extern long cont;
 
 extern HWND mainHwnd;
-extern void  PASCAL OutputStr(
+extern void  PASCAL OutputText(
 	HWND    hWnd,
 	LPSTR   str);
 
 
-unsigned long where[2];      //these are for the range currently being divided between
-unsigned long m_start_pos[2];//the threads.
-unsigned long progress[2];
-unsigned long m_current_pos[2];
-unsigned long m_end_pos[2];
+unsigned long where[2] = { 0 };      //these are for the range currently being divided between
+unsigned long m_start_pos[2] = { 0 };//the threads.
+unsigned long progress[2] = { 0 };
+unsigned long m_current_pos[2] = { 0 };
+unsigned long m_end_pos[2] = { 0 };
 
-long overheat_err;
-long numclocks;
-float fracdone;              //used by calc_main_status -- if a new range is just started and
+long overheat_err = 0;
+long numclocks = 0;
+float fracdone = 0.0f;              //used by calc_main_status -- if a new range is just started and
 //the last one isn't done, (i.e. with a multi-processor system)
 //this can be negative.
 
 
 extern long lastcommunicated;
 
-long rangeswaiting;
+long rangeswaiting = 0;
 
 typedef struct {
 	long d[2];
@@ -90,22 +90,22 @@ struct threaddat {
 };
 
 
-extern void __pascal POWERINIT(void);
-extern void __pascal POWERFUNC(polylogdat* dat);
-extern void __pascal POLYLOGCONVOUT(polylogdat* dat);
+extern void PASCAL POWERINIT(void);
+extern void PASCAL POWERFUNC(polylogdat* dat);
+extern void PASCAL POLYLOGCONVOUT(polylogdat* dat);
 
-long error;
-char ErrMsg[200];
+long error = 0;
+char ErrMsg[256] = { 0 };
 
-CRITICAL_SECTION not_calculating;  //just use one criticalsection for all special purposes
+CRITICAL_SECTION not_calculating = { 0 };  //just use one criticalsection for all special purposes
 // -- under 0.01% of time should be spent in them in total
 //anyway.                                                                                
 
 void pihex_dropout(void)
 {
-	char cbuf[256];
-	char buf[256];
-	long thrd;
+	char cbuf[256] = { 0 };
+	char buf[256] = { 0 };
+	long thrd = 0;
 
 	WritePrivateProfileString("Main", "where", "0000000000000000", IniFileName);
 	WritePrivateProfileString("Main", "srt_pos", "0000000000000000", IniFileName);
@@ -127,16 +127,16 @@ void pihex_dropout(void)
 
 long main_newrange(void)
 {
-	char rangeini[200];
-	char cBuf[20];
-	long temp;
-	HANDLE hFind;
-	WIN32_FIND_DATA Findtemp;
+	char rangeini[256] = { 0 };
+	char cBuf[32] = { 0 };
+	long temp = 0;
+	HANDLE hFind = NULL;
+	WIN32_FIND_DATA find_data = { 0 };
 
-	getcwd(rangeini, 200);
+	getcwd(rangeini, sizeof(rangeini));
 	strcat(rangeini, "\\range*.ini");
 
-	hFind = FindFirstFile((LPCTSTR)&rangeini, &Findtemp);
+	hFind = FindFirstFile((LPCTSTR)&rangeini, &find_data);
 	if (hFind == INVALID_HANDLE_VALUE) {
 		request_communication(1, 0);
 		error = 1;
@@ -144,9 +144,9 @@ long main_newrange(void)
 	};
 
 	// The file exists now
-	getcwd(rangeini, 200);
+	getcwd(rangeini, sizeof(rangeini));
 	strcat(rangeini, "\\");
-	strcat(rangeini, Findtemp.cFileName);
+	strcat(rangeini, find_data.cFileName);
 	FindClose(hFind);
 
 	GetPrivateProfileString("Main", "Where", "0000000000000000", cBuf, 20, rangeini);
@@ -198,9 +198,9 @@ long main_newrange(void)
 	return(1);
 };
 
-long __pascal calc_main_init(void)
+long PASCAL calc_main_init(void)
 {
-	char cBuf[20];
+	char cBuf[256] = { 0 };
 
 	InitializeCriticalSection(&not_calculating);
 
@@ -231,23 +231,23 @@ long __pascal calc_main_init(void)
 	return(1);
 };
 
-extern DWORD GetHighTime(void);
-extern void updatehours(float cav);
-extern void tellserverhours(void);
+extern DWORD get_high_time(void);
+extern void update_hours(float cav);
+extern void tell_server_hours(void);
 
 void newrange(struct threaddat* dat)
 {
-	char Thname[20];
-	char cBuf[20];
-	unsigned long temp;
-	unsigned long pisum1[4];
-	char outstr[256];
-	FILE* f;
+	char Thname[256] = { 0 };
+	char cBuf[256] = { 0 };
+	unsigned long mcp = 0;
+	unsigned long pisum1[4] = { 0 };
+	char outstr[256] = { 0 };
+	FILE* f = NULL;
 
-	long starttime;
-	long endtime;
-	float idealtime;
-	float cav;
+	long starttime = 0;
+	long endtime = 0;
+	float idealtime = 0;
+	float cav = 0.0f;
 
 	POLYLOGCONVOUT(&dat->pldat);
 
@@ -268,7 +268,7 @@ void newrange(struct threaddat* dat)
 
 	sprintf(Thname, "Thread%d", dat->threadnum);
 
-	endtime = GetHighTime();
+	endtime = get_high_time();
 	starttime = GetPrivateProfileInt(Thname, "stime", 0, IniFileName);
 	sprintf(cBuf, "%d", endtime);
 	WritePrivateProfileString(Thname, "stime", cBuf, IniFileName);
@@ -277,13 +277,13 @@ void newrange(struct threaddat* dat)
 		GetPrivateProfileString("Main", "rtime", "0", cBuf, 20, IniFileName);
 		sscanf(cBuf, "%f", &idealtime);
 		cav = cav * idealtime;
-		if (idealtime > 0) updatehours(cav);
+		if (idealtime > 0) update_hours(cav);
 	};
 
-	temp = GetPrivateProfileInt(Thname, "lastr", 0, IniFileName);
-	if (temp != 0) {
-		sprintf(outstr, "donerange,%d\n", temp);
-		tellserverhours();
+	mcp = GetPrivateProfileInt(Thname, "lastr", 0, IniFileName);
+	if (mcp != 0) {
+		sprintf(outstr, "donerange,%d\n", mcp);
+		tell_server_hours();
 		spoolmsg(outstr);
 		spoolmsg("getrange\n");
 		WritePrivateProfileString(Thname, "lastr", "0", IniFileName);
@@ -295,8 +295,6 @@ void newrange(struct threaddat* dat)
 		lastcommunicated = 0;
 		WritePrivateProfileString("Main", "lastcommunicated", "0", IniFileName);
 	};
-
-
 
 	dat->pisum[0] = 0;
 	dat->pisum[1] = 0;
@@ -320,9 +318,9 @@ void newrange(struct threaddat* dat)
 	dat->start_pos[0] = m_current_pos[0];
 	dat->start_pos[1] = m_current_pos[1];
 
-	temp = m_current_pos[0];
+	mcp = m_current_pos[0];
 	m_current_pos[0] = (m_current_pos[0] & (0xF0000000)) + (1 << 28);
-	if (m_current_pos[0] < temp) m_current_pos[1]++;
+	if (m_current_pos[0] < mcp) m_current_pos[1]++;
 
 	if ((m_current_pos[1] > m_end_pos[1]) || ((m_current_pos[1] == m_end_pos[1]) &&
 		m_current_pos[0] > m_end_pos[0]))
@@ -355,9 +353,9 @@ void newrange(struct threaddat* dat)
 	WritePrivateProfileString(Thname, "end_pos", cBuf, IniFileName);
 }
 
-void __pascal calc_progress(struct threaddat* dat)
+void PASCAL calc_progress(struct threaddat* dat)
 {
-	unsigned long temp;
+	unsigned long t = 0;
 	EnterCriticalSection(&not_calculating);
 	if (overheat_err) {
 		sprintf(ErrMsg, "Error: CPU appears to be overheating."); error = 1;
@@ -366,21 +364,21 @@ void __pascal calc_progress(struct threaddat* dat)
 
 	if (rangeswaiting < 1) request_communication(0, 0);
 
-	temp = progress[0];
+	t = progress[0];
 	progress[0] += 16;
-	if (progress[0] < temp) progress[1]++;         //carry
+	if (progress[0] < t) progress[1]++;         //carry
 	if (dat->current_pos[0] == dat->end_pos[0]
 		&& dat->current_pos[1] == dat->end_pos[1])     //if we've finished this sub-range...
 		newrange(dat);                                                //get another.
 	LeaveCriticalSection(&not_calculating);
 }
 
-void __pascal calc_thread_init(LPVOID p)
+void PASCAL calc_thread_init(LPVOID p)
 {
 	struct threaddat* dat = (struct threaddat*)p;
-	char Thname[20];
-	char cBuf[20];
-	unsigned long temp;
+	char Thname[32] = { 0 };
+	char cBuf[32] = { 0 };
+	unsigned long t;
 	EnterCriticalSection(&not_calculating);
 	_control87(_PC_64 | _RC_DOWN, _MCW_PC | _MCW_RC);        //set precision to 64 bits, rounding to down.
 	sprintf(Thname, "Thread%d", dat->threadnum);
@@ -404,48 +402,48 @@ void __pascal calc_thread_init(LPVOID p)
 	dat->start_pos[0] = dat->current_pos[0];
 	dat->start_pos[1] = dat->current_pos[1];
 
-	temp = progress[0];                     //adjust progress to account for the fact that
+	t = progress[0];                     //adjust progress to account for the fact that
 	progress[0] -= dat->end_pos[0];         //this sub-range isn't finished yet.
-	if (temp < progress[0]) progress[1]--;   //borrow
+	if (t < progress[0]) progress[1]--;   //borrow
 	progress[1] -= dat->end_pos[1];
 
-	temp = progress[0];
+	t = progress[0];
 	progress[0] += dat->current_pos[0];
-	if (temp > progress[0]) progress[1]++;   //carry
+	if (t > progress[0]) progress[1]++;   //carry
 	progress[1] += dat->current_pos[1];
 
 	LeaveCriticalSection(&not_calculating);
 }
 
-long calc_error;
-char calc_Status[200];
-char calc_Tip[200];
+long calc_error = 0;
+char calc_Status[256] = { 0 };
+char calc_Tip[256] = { 0 };
 long oldprogress = 0;
-long oldtcount;
+long oldtcount = 0;
 extern void calcfracdone(void);
-void __pascal calc_main_status(void)
+void PASCAL calc_main_status(void)
 {
-	WIN32_FIND_DATA temp;
-	HANDLE hFind;
-	char outputname[20];
-	char cBuf[20];
-	float tempf;
-	long templ;
+	WIN32_FIND_DATA find_data = { 0 };
+	HANDLE hFind = NULL;
+	char outputname[32] = { 0 };
+	char cBuf[32] = { 0 };
+	float tf = 0.0f;
+	unsigned long long tl = 0;
 
 	calcfracdone();
 
-	templ = GetTickCount();
+	tl = GetTickCount64();
 	if (oldprogress != 0)
 	{
-		tempf = progress[0] - oldprogress;
-		tempf = tempf * numclocks / 1000. / (templ - oldtcount);
-		sprintf(calc_Status, "%f%% done,%fMHz", fracdone, tempf);
+		tf = progress[0] - oldprogress;
+		tf = tf * numclocks / 1000. / (tl - oldtcount);
+		sprintf(calc_Status, "%f%% done,%fMHz", fracdone, tf);
 	}
 	else
 	{
 		sprintf(calc_Status, "%f%% done", fracdone);
 	};
-	oldtcount = templ;
+	oldtcount = tl;
 	oldprogress = progress[0];
 	sprintf(calc_Tip, "PiHex %f%% done", fracdone);
 
@@ -453,14 +451,14 @@ void __pascal calc_main_status(void)
 	calc_error = 0;
 };
 
-void __pascal calc_thread_done(LPVOID p)
+void PASCAL calc_thread_done(LPVOID p)
 {
 	struct threaddat* dat = (struct threaddat*)p;
-	char Thname[20];
-	char cBuf[120];
-	unsigned long pisum1[4];
-	FILE* f;
-	char outstr[256];
+	char Thname[32] = { 0 };
+	char cBuf[256] = { 0 };
+	unsigned long pisum1[4] = { 0 };
+	FILE* f = NULL;
+	char outstr[256] = { 0 };
 
 	if (dat->threadnum == -1) return;
 
@@ -492,9 +490,9 @@ void __pascal calc_thread_done(LPVOID p)
 	LeaveCriticalSection(&not_calculating);
 };
 
-void __pascal calc_main_done(void)
+void PASCAL calc_main_done(void)
 {
-	char cBuf[20];
+	char cBuf[32] = { 0 };
 
 	sprintf(cBuf, "%d", rangeswaiting);
 	WritePrivateProfileString("Main", "rangesw", cBuf, IniFileName);

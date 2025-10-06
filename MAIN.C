@@ -9,55 +9,54 @@ purposes only, unless permission is obtained from the author.
 #include "PiHex.h"
 #include "Cpuid.h"
 #include <intrin.h>
-#pragma intrinsic(__rdtsc)
 
 char AppClass[] = sAppClass;
 char AppName[] = sAppName;
-char IniFileName[256];
+char IniFileName[256] = { 0 };
 
 LRESULT CALLBACK WindowProc(HWND, UINT, WPARAM, LPARAM);
 
 // Taken from prime.exe
-static  char*  lines[NumLines] = { 0 };
-static  char     linebuf[NumLines * LineLength];
-static  int      charHeight = 0;
-void  PASCAL OutputStr(HWND hWnd, LPSTR str);
-void  PASCAL LineFeed(HWND hWnd);
+static char* Lines[NumLines] = { 0 };
+static char LineBuffer[NumLines * LineLength];
+static int  CharHeight = 0;
+void PASCAL OutputText(HWND hWnd, LPSTR str);
+void PASCAL LineFeed(HWND hWnd);
 
-HANDLE hCalcThread[MAXTHREADS];
-DWORD CalcThreadId[MAXTHREADS];
+HANDLE CalcThreadHandles[MAXTHREADS] = { 0 };
+DWORD CalcThreadIds[MAXTHREADS] = { 0 };
 
-int TRAY_ICON;
-int NO_ICON;
-int AUTO_CONT; //1 is yes, 0 is no
-int service;
-char UserName[128];
-char Useremail[128];
-long cpuspeed;
-double daysworktoget;
+int TRAY_ICON = 0;
+int NO_ICON = 0;
+int AUTO_CONT = 0; //1 is yes, 0 is no
+int service = 0;
+char UserName[128] = { 0 };
+char Useremail[128] = { 0 };
+long cpuspeed = 0;
+double daysworktoget = 0;
 #define cputype CPUTYPE
 #define cpuvendor CPUVENDOR
-long cpunum;
-double hoursworkperday;
-long connectmethod;
-long computernum;
-long lastcommunicated;
+long cpunum = 0;
+double hoursworkperday = 0;
+long connectmethod = 0;
+long computernum = 0;
+long lastcommunicated = 0;
 
-char proxyaddr[128];
-long proxyport;
+char proxyaddr[128] = { 0 };
+long proxyport = 0;
 
-long autoconn;
-long joined;
-long PR_OPT;
+long autoconn = 0;
+long joined = 0;
+long PR_OPT = 0;
 
-long windowflashed;
-long threads;
+long windowflashed = 0;
+long threads = 0;
 
-HWND mainHwnd;
+HWND mainHwnd = NULL;
 long cont = FALSE;     //used to tell Calc_Thread to exit
 //  cont = computing
 long threadsactive = 0;
-HINSTANCE AppInst;
+HINSTANCE AppInst = NULL;
 
 long communicating = 0;
 long wanttocommunicate = 0;
@@ -66,62 +65,50 @@ long wanttocommunicate = 0;
 FILE* timesfl;
 #endif
 
-long tscval[2];
-/*
-float rdtsc(void);          //read the Pentium Time Stamp Counter
-#pragma aux rdtsc =     \
-		0x0F 0x31       \
-		"mov tscval,eax"  \
-		"mov tscval+4,edx"\
-		"fild qword tscval"\
-		modify [eax edx];
-*/
+long tscval[2] = { 0 };
+void process_input(void);
+void tray_message(UINT message, LPCSTR prompt, HWND hwnd, UINT Icon);
+unsigned int PASCAL calc_thread_proc(LPVOID threaddat);
+void make_service_win95(void);
+void set_registry(void);
 
-LARGE_INTEGER int64;
-void processinput(void);
-void TrayMessage(UINT message, LPCSTR prompt, HWND hwnd, UINT Icon);
-unsigned __stdcall CalcThread(LPVOID threaddat);
-void MakeService95(void);
-void SetRegistry(void);
-
-//float fild(void);           //convert from int64 to float
-
-struct thdat {
+struct thdat 
+{
 	long threadnum;
 };
 
-void tellserverhours(void)
+void tell_server_hours(void)
 {
-	char cbuf[256];
+	char cbuf[256] = { 0 };
 
 	sprintf(cbuf, "change,%s,%s,%d,%d,%d,%d,%f,%f\ngetrtime\n", UserName, Useremail, cpuvendor, cputype, cpuspeed, cpunum, hoursworkperday, daysworktoget);
 	spoolmsg(cbuf);
 };
 
-void updatehours(float cav)
+void update_hours(float cav)
 {
-	char cbuf[20];
+	char cbuf[256] = { 0 };
 
 	hoursworkperday = 1.0 / (0.99 / hoursworkperday + 0.01 / cav);
 	sprintf(cbuf, "%f", hoursworkperday);
 	WritePrivateProfileString("Main", "hoursperday", cbuf, IniFileName);
 };
 
-long cftblah;
-double busytime;
-double tottime;
-long thrdpr;
+long cftblah = 0;
+double busytime = 0.0;
+double tottime = 0.0;
+long thrdpr = 0;
 long disablecomputing = -9;
 
-UINT StatusTimer;
+UINT StatusTimer = 0;
 
-unsigned __stdcall cpufreetime(void* thd)
+unsigned int PASCAL cpu_free_time(void* thd)
 {
-	unsigned long atc;
-	unsigned long btc;
-	unsigned long ctc;
+	unsigned long long atc;
+	unsigned long long btc;
+	unsigned long long ctc;
 
-	char cbuf[80];
+	char cbuf[256] = { 0 };
 
 	busytime = 10000;
 	tottime = 20000;
@@ -135,15 +122,15 @@ unsigned __stdcall cpufreetime(void* thd)
 		// if cpu is busy with 'real' work, btc-atc will be large
 		// if cpu is busy with 'idle' work (of priority above PiHex's), ctc-btc will be large.
 
-		atc = GetTickCount();
+		atc = GetTickCount64();
 		SetThreadPriority(GetCurrentThread(), 2);
 		Sleep(500 * max(disablecomputing, 1));
-		btc = GetTickCount();
+		btc = GetTickCount64();
 		SetThreadPriority(GetCurrentThread(), thrdpr + 1);
 		Sleep(0);
-		ctc = GetTickCount();
+		ctc = GetTickCount64();
 
-		sprintf(cbuf, "%d,%d\n", btc - atc, ctc - btc);
+		sprintf(cbuf, "%llu,%llu\n", btc - atc, ctc - btc);
 		//        OutputStr(mainHwnd,cbuf);
 
 		if (atc + 550 > btc)
@@ -188,10 +175,10 @@ unsigned __stdcall cpufreetime(void* thd)
 	return 0;
 }
 
-DWORD GetHighTime(void)
+DWORD get_high_time(void)
 {
-	SYSTEMTIME systime;
-	FILETIME ftime;
+	SYSTEMTIME systime = { 0 };
+	FILETIME ftime = { 0 };
 
 	GetSystemTime(&systime);
 	SystemTimeToFileTime(&systime, &ftime);
@@ -199,32 +186,32 @@ DWORD GetHighTime(void)
 	return(ftime.dwHighDateTime);
 };
 
-void StatusProc(HWND Hwnd)                      //triggered by WM_TIMER
+void on_status_timer(HWND Hwnd)                      //triggered by WM_TIMER
 {
-	WIN32_FIND_DATA temp;
-	HANDLE hFind;
+	WIN32_FIND_DATA find_data = { 0 };
+	HANDLE hFind = { 0 };
 
 	calc_main_status();
 	if (strlen(calc_Status) > 0) {
-		OutputStr(mainHwnd, calc_Status);
+		OutputText(mainHwnd, calc_Status);
 		LineFeed(mainHwnd);
 	};
 
-	if (lastcommunicated + daysworktoget * 400 < GetHighTime()) request_communication(0, 0);
+	if (lastcommunicated + daysworktoget * 400 < get_high_time()) request_communication(0, 0);
 	// We have not communicated recently.  Communicate
 
-	if (wanttocommunicate && (!communicating)) OutputStr(mainHwnd, "PiHex would like to communicate with the server.");
+	if (wanttocommunicate && (!communicating)) OutputText(mainHwnd, "PiHex would like to communicate with the server.");
 	if (connectmethod / 2 == 2) {
-		hFind = FindFirstFile("output.txt", &temp);
+		hFind = FindFirstFile("output.txt", &find_data);
 		if (hFind != INVALID_HANDLE_VALUE) {     //file exists
-			OutputStr(mainHwnd, "Please send output.txt to the PiHex server (see readme.txt)\n");
+			OutputText(mainHwnd, "Please send output.txt to the PiHex server (see readme.txt)\n");
 			FindClose(hFind);
 		};
 
-		hFind = FindFirstFile("input.txt", &temp);
+		hFind = FindFirstFile("input.txt", &find_data);
 		if (hFind != INVALID_HANDLE_VALUE) {     //file exists
 			FindClose(hFind);
-			processinput();
+			process_input();
 		};
 	};
 
@@ -234,8 +221,8 @@ void StatusProc(HWND Hwnd)                      //triggered by WM_TIMER
 		FlashWindow(Hwnd, TRUE);
 	}
 	if (TRAY_ICON) {
-		if (windowflashed) TrayMessage(NIM_MODIFY, calc_Tip, Hwnd, BlackIcon);
-		else TrayMessage(NIM_MODIFY, calc_Tip, Hwnd, AppIcon);
+		if (windowflashed) tray_message(NIM_MODIFY, calc_Tip, Hwnd, BlackIcon);
+		else tray_message(NIM_MODIFY, calc_Tip, Hwnd, AppIcon);
 	}
 }
 
@@ -252,17 +239,15 @@ void SampleProc()                               //triggered by WM_TIMER
 }
 #endif
 
-unsigned __stdcall CalcThread(LPVOID p)
+unsigned int PASCAL calc_thread_proc(LPVOID p)
 {
 	struct thdat* threaddat = (struct thdat*)p;
-	struct thdat* tmpdat;
-	long curpr;
+	struct thdat* tmpdat = NULL;
+	long curpr = 0;
 #ifdef times
 	double st;
 	int longst;
 #endif
-
-
 	threadsactive++;
 	tmpdat = (struct thdat*)(((long)threaddat + 15) & 0xFFFFFFF0);     //round up to
 	*(long*)tmpdat = *(long*)threaddat;                      //16 byte boundary.
@@ -295,7 +280,7 @@ unsigned __stdcall CalcThread(LPVOID p)
 	if (tmpdat->threadnum == -1) {
 		calc_main_status();
 		if (strlen(calc_Status) > 0) {
-			OutputStr(mainHwnd, calc_Status);
+			OutputText(mainHwnd, calc_Status);
 			LineFeed(mainHwnd);
 		};
 	}                            //if thread exited by itself, print any error 
@@ -324,26 +309,21 @@ unsigned __stdcall CalcThread(LPVOID p)
 	return(0);
 }
 
-void CpuId(void)
+void cpuid(void)
 {
 	CPUID_PROC();
 
-
 	if (strcmp(VENDOR, "GenuineIntel") == 0) { CPUVENDOR = CPU_INTEL; }
-	else
-		if (strcmp(VENDOR, "AuthenticAMD") == 0) { CPUVENDOR = CPU_AMD; }
-		else
-			if (strcmp(VENDOR, "CyrixInstead") == 0) { CPUVENDOR = CPU_CYRIX; }
-			else
-				if (strcmp(VENDOR, "CentaurHauls") == 0) { CPUVENDOR = CPU_IDT; }
-				else
-					CPUVENDOR = CPU_UNKNOWN;
+	else if (strcmp(VENDOR, "AuthenticAMD") == 0) { CPUVENDOR = CPU_AMD; }
+	else if (strcmp(VENDOR, "CyrixInstead") == 0) { CPUVENDOR = CPU_CYRIX; }
+	else if (strcmp(VENDOR, "CentaurHauls") == 0) { CPUVENDOR = CPU_IDT; }
+	else CPUVENDOR = CPU_UNKNOWN;
 };
 
-void StartCalc(HWND hwnd)
+void calc_start(HWND hwnd)
 {
-	long thnum;
-	struct thdat* threaddat;
+	long thnum = 0;
+	struct thdat* threaddat = NULL;
 
 	EnableMenuItem(GetMenu(hwnd), MENU_STOP, MF_ENABLED);
 	EnableMenuItem(GetMenu(hwnd), MENU_START, MF_GRAYED);
@@ -367,8 +347,8 @@ void StartCalc(HWND hwnd)
 	for (thnum = 0; thnum < threads; thnum++) {           //for each thread...
 		threaddat = (struct thdat*)HeapAlloc(GetProcessHeap(), 0, ThreadDataSize + 16);//get some memory
 		threaddat->threadnum = thnum;                              //tell it its name
-		hCalcThread[thnum] = (HANDLE)_beginthreadex(NULL, 0, CalcThread, threaddat,
-			0, (unsigned*)&CalcThreadId[thnum]);          //and create it
+		CalcThreadHandles[thnum] = (HANDLE)_beginthreadex(NULL, 0, calc_thread_proc, threaddat,
+			0, (unsigned*)&CalcThreadIds[thnum]);          //and create it
 	}
 
 	Sleep(1000);
@@ -379,15 +359,15 @@ void StartCalc(HWND hwnd)
 #endif
 
 	if (PR_OPT == PR_AUTO)
-		SetThreadPriority((HANDLE)_beginthreadex(NULL, 0, cpufreetime,
+		SetThreadPriority((HANDLE)_beginthreadex(NULL, 0, cpu_free_time,
 			NULL, 0, (unsigned*)&cftblah), 2);
 	else thrdpr = PR_OPT - PR_4;
 }
 
-void EndCalc(HWND hwnd)
+void calc_end(HWND hwnd)
 {
-	long thnum;
-	long temp;
+	long thnum = 0;
+	long exit_code = 0;
 
 	EnableMenuItem(GetMenu(hwnd), MENU_START, MF_ENABLED);
 	EnableMenuItem(GetMenu(hwnd), MENU_STOP, MF_GRAYED);
@@ -404,9 +384,9 @@ void EndCalc(HWND hwnd)
 
 	for (thnum = 0; thnum < threads; thnum++)
 	{
-		GetExitCodeThread(hCalcThread[thnum], (LPDWORD)&temp);
-		if (temp == STILL_ACTIVE)
-			SetThreadPriority(hCalcThread[thnum], THREAD_PRIORITY_HIGHEST);
+		GetExitCodeThread(CalcThreadHandles[thnum], (LPDWORD)&exit_code);
+		if (exit_code == STILL_ACTIVE)
+			SetThreadPriority(CalcThreadHandles[thnum], THREAD_PRIORITY_HIGHEST);
 	}   //set all the threads to highest priority, so that it will finish
 		//even if some other programs are sucking up CPU cycles.
 
@@ -418,13 +398,13 @@ void EndCalc(HWND hwnd)
 	fclose(timesfl);
 #endif
 	calc_main_done();
-	TrayMessage(NIM_MODIFY, calc_Tip, hwnd, AppIcon);              //fix the icon, in case it is black
+	tray_message(NIM_MODIFY, calc_Tip, hwnd, AppIcon);              //fix the icon, in case it is black
 }
 
-long high32oftime64(char* fname)
+long high32_of_filetime(char* fname)
 {
-	HANDLE f;
-	FILETIME lastwrite;
+	HANDLE f = NULL;
+	FILETIME lastwrite = { 0 };
 
 	f = CreateFile(fname, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
@@ -436,36 +416,36 @@ long high32oftime64(char* fname)
 };
 
 UINT TrayTimer = 0;
-void TrayMessage(UINT message, LPCSTR prompt, HWND hwnd, UINT Icon)
+void tray_message(UINT message, LPCSTR prompt, HWND hwnd, UINT Icon)
 {
-	NOTIFYICONDATA tnd;
+	NOTIFYICONDATA notify_data = { 0 };
 
 	switch (message) {
 	case NIM_ADD:
-		tnd.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+		notify_data.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
 		break;
 	case NIM_MODIFY:
-		tnd.uFlags = NIF_TIP | NIF_ICON;
+		notify_data.uFlags = NIF_TIP | NIF_ICON;
 		break;
 	case NIM_DELETE:
-		tnd.uFlags = 0;
+		notify_data.uFlags = 0;
 	}
 
-	lstrcpy(tnd.szTip, prompt);
+	lstrcpy(notify_data.szTip, prompt);
 
-	tnd.uID = 1;
-	tnd.cbSize = sizeof(tnd);
-	tnd.hWnd = hwnd;
-	tnd.uCallbackMessage = WM_TRAY;
-	tnd.hIcon = LoadIcon((HINSTANCE)AppInst, MAKEINTRESOURCE(Icon));
+	notify_data.uID = 1;
+	notify_data.cbSize = sizeof(notify_data);
+	notify_data.hWnd = hwnd;
+	notify_data.uCallbackMessage = WM_TRAY;
+	notify_data.hIcon = LoadIcon((HINSTANCE)AppInst, MAKEINTRESOURCE(Icon));
 
-	if ((!Shell_NotifyIcon(message, &tnd)) && (message == NIM_ADD) && (!TrayTimer))
+	if ((!Shell_NotifyIcon(message, &notify_data)) && (message == NIM_ADD) && (!TrayTimer))
 		TrayTimer = SetTimer(hwnd, tTray, 1000, NULL);
 	else
 		if (TrayTimer) { KillTimer(hwnd, TrayTimer); TrayTimer = 0; }
 }
 
-BOOL  PASCAL About(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+BOOL PASCAL about_message_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:return(TRUE);
@@ -479,7 +459,7 @@ BOOL  PASCAL About(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return (FALSE);
 }
 
-BOOL  PASCAL Priority(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+BOOL PASCAL get_priority_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -496,7 +476,7 @@ BOOL  PASCAL Priority(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (IsDlgButtonChecked(hwnd, PR_AUTO)) PR_OPT = PR_AUTO;
 			if (PR_OPT == PR_AUTO)
 			{
-				if (threadsactive) SetThreadPriority((HANDLE)_beginthreadex(NULL, 0, cpufreetime,
+				if (threadsactive) SetThreadPriority((HANDLE)_beginthreadex(NULL, 0, cpu_free_time,
 					NULL, 0, (unsigned*)&cftblah), 2);
 			}
 			else thrdpr = PR_OPT - PR_4;
@@ -511,12 +491,12 @@ BOOL  PASCAL Priority(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 extern long rangeswaiting;
 
-long processmsg(char* dat)
+long process_message(char* dat)
 {
-	char* dat1, * temp;
-	char cbuf[10];
-	float time;
-	FILE* f;
+	char* dat1 = NULL, * temp = NULL;
+	char cbuf[256] = { 0 };
+	float time = 0.0f;
+	FILE* f = NULL;
 
 	if (strncmp(dat, "HTTP", 4) == 0)
 	{
@@ -527,7 +507,7 @@ long processmsg(char* dat)
 		if (dat1 != NULL) dat1 += 2;
 
 		if (dat1 == NULL) {
-			OutputStr(mainHwnd, "The server has sent back an invalid reply.\nThis should never occur.\n");
+			OutputText(mainHwnd, "The server has sent back an invalid reply.\nThis should never occur.\n");
 			return(1800);
 		};
 	}
@@ -575,17 +555,17 @@ long processmsg(char* dat)
 				}
 				else
 					if (strncmp(dat1, "OK", 2) != 0) {
-						OutputStr(mainHwnd, "I don't understand what the server just told me, so I'll just ignore it.\nThis should never occur.\n");
+						OutputText(mainHwnd, "I don't understand what the server just told me, so I'll just ignore it.\nThis should never occur.\n");
 					};
 
 	return(0);
 }
 
-void processinput(void)
+void process_input(void)
 {
-	FILE* f;
-	char dat[256];
-	long temp;
+	FILE* f = NULL;
+	char dat[256] = { 0 };
+	long temp = 0;
 
 	f = fopen("input.txt", "rt");
 	while (fgets(dat, 256, f) != NULL)
@@ -593,10 +573,10 @@ void processinput(void)
 		if (strncmp(dat, "date", 4) == 0) {
 			// compare dates
 			sscanf(dat, "datetime,%d", &temp);
-			if (temp + 2 > high32oftime64("output.txt")) remove("output.txt");
+			if (temp + 2 > high32_of_filetime("output.txt")) remove("output.txt");
 		}
 		else
-			if (strlen(dat) > 2) processmsg(dat);
+			if (strlen(dat) > 2) process_message(dat);
 	};
 	fclose(f);
 	remove("input.txt");
@@ -605,17 +585,17 @@ void processinput(void)
 typedef DWORD(APIENTRY* TRasEnumConnectionsA)(LPRASCONNA, LPDWORD, LPDWORD);
 typedef DWORD(APIENTRY* TRasGetConnectStatusA)(HRASCONN, LPRASCONNSTATUSA);
 
-long modemconnected(void)
+long check_modem_connection(void)
 {
-	RASCONN* connlist;
-	RASCONNSTATUS status;
-	DWORD size;
-	DWORD entrynum;
-	long temp;
+	RASCONN* connlist = NULL;
+	RASCONNSTATUS status = { 0 };
+	DWORD size = 0;
+	DWORD entrynum = 0;
+	long temp = 0;
 
-	char cbuf[256];
+	char cbuf[256] = { 0 };
 
-	HINSTANCE hinstLib;
+	HINSTANCE hinstLib = NULL;
 	TRasEnumConnectionsA PRasEnumConnectionsA;
 	TRasGetConnectStatusA PRasGetConnectStatusA;
 
@@ -625,7 +605,7 @@ long modemconnected(void)
 	/* If the handle is valid, try to get the function address. */
 
 	if (hinstLib == NULL) {
-		OutputStr(mainHwnd, "Could not load RAS DLL.\n");
+		OutputText(mainHwnd, "Could not load RAS DLL.\n");
 		return(0);
 	};
 
@@ -635,7 +615,7 @@ long modemconnected(void)
 	/* If the function address is valid, call the function. */
 
 	if ((PRasEnumConnectionsA == NULL) || (PRasGetConnectStatusA == NULL)) {
-		OutputStr(mainHwnd, "Could not get RAS functions.\n");
+		OutputText(mainHwnd, "Could not get RAS functions.\n");
 		return(0);
 	};
 
@@ -650,13 +630,13 @@ long modemconnected(void)
 	temp = (PRasEnumConnectionsA)(connlist, &size, &entrynum);
 
 	if (temp) {
-		OutputStr(mainHwnd, "Error in RasEnumConnections.\nThis should never happen.\n");
+		OutputText(mainHwnd, "Error in RasEnumConnections.\nThis should never happen.\n");
 		sprintf(cbuf, "Error code: %d\n", temp);
-		OutputStr(mainHwnd, cbuf);
+		OutputText(mainHwnd, cbuf);
 	};
 
 	if (entrynum == 0) {
-		OutputStr(mainHwnd, "No active dial-up connection found.\n");
+		OutputText(mainHwnd, "No active dial-up connection found.\n");
 		return(0);
 	};
 
@@ -671,27 +651,27 @@ long modemconnected(void)
 		return(1);
 	};
 
-	OutputStr(mainHwnd, "No active dial-up connection found.\n");
+	OutputText(mainHwnd, "No active dial-up connection found.\n");
 	return(0);
 }
 
 
 long attempt_communication(void)
 {
-	FILE* f;
-	FILE* g;
+	FILE* f = NULL;
+	FILE* g = NULL;
 
-	int err;
-	WORD wVersionRequested;
-	WSADATA wsaData;
-	struct hostent* hp;
-	SOCKET s;
-	SOCKADDR_IN sn;
-	long len;
-	long temp;
-	char sendstr[2560];
-	char dat[256];
-	char cbuf[80];
+	int err = 0;
+	WORD wVersionRequested = 0;
+	WSADATA wsaData = { 0 };
+	struct hostent* hp = NULL;
+	SOCKET s = 0;
+	SOCKADDR_IN sn = { 0 };
+	long len = 0;
+	long temp = 0;
+	char sendstr[2560] = { 0 };
+	char dat[256] = { 0 };
+	char cbuf[80] = { 0 };
 
 	if (connectmethod / 2 == 2) {
 		// sneakernet: append spool.txt into output.txt
@@ -709,7 +689,7 @@ long attempt_communication(void)
 		remove("spool.txt");
 
 		fclose(g);
-		temp = high32oftime64("output.txt");
+		temp = high32_of_filetime("output.txt");
 
 		g = fopen("output.txt", "at");
 		fprintf(g, "-1,datetime,%d\n", temp);
@@ -719,14 +699,14 @@ long attempt_communication(void)
 	};
 
 	if (connectmethod / 2 == 1)
-		if (modemconnected() == 0) {
+		if (check_modem_connection() == 0) {
 			return(120);
 		};
 
 	wVersionRequested = MAKEWORD(1, 1);
 	err = WSAStartup(wVersionRequested, &wsaData);
 	if (err != 0) {
-		OutputStr(mainHwnd, "Winsock stack could not be found.\n");
+		OutputText(mainHwnd, "Winsock stack could not be found.\n");
 		return(1800);
 	};
 
@@ -755,7 +735,7 @@ long attempt_communication(void)
 	};
 
 	if (!hp) {
-		OutputStr(mainHwnd, "PiHex server could not be found.\n");
+		OutputText(mainHwnd, "PiHex server could not be found.\n");
 		return(1800);
 	};
 
@@ -765,7 +745,7 @@ long attempt_communication(void)
 #endif
 
 
-#ifdef DEBUG
+#ifdef _DEBUG
 	g = fopen("comm.txt", "at");
 #endif
 
@@ -778,8 +758,8 @@ long attempt_communication(void)
 			s = socket(hp->h_addrtype, SOCK_STREAM, 0);
 			if (s == INVALID_SOCKET) {
 				fclose(f);
-				OutputStr(mainHwnd, "Cannot create socket. This should never occur.\n");
-#ifdef DEBUG
+				OutputText(mainHwnd, "Cannot create socket. This should never occur.\n");
+#ifdef _DEBUG
 				fclose(g);
 #endif
 				return(1800);
@@ -788,8 +768,8 @@ long attempt_communication(void)
 			err = connect(s, (SOCKADDR*)&sn, sizeof(sn));
 			if (err != 0) {
 				fclose(f);
-				OutputStr(mainHwnd, "Could not connect to server.\n");
-#ifdef DEBUG
+				OutputText(mainHwnd, "Could not connect to server.\n");
+#ifdef _DEBUG
 				fclose(g);
 #endif
 				return(1800);
@@ -804,7 +784,7 @@ long attempt_communication(void)
 				sprintf(sendstr, "GET http://pihex.cecm.sfu.ca/sendmsg.cgi?%d,%s HTTP/1.0\r\nPragma: no-cache\r\nCache-Control: no-cache\r\n\r\n", temp, &dat);
 
 
-#ifdef DEBUG
+#ifdef _DEBUG
 			fprintf(g, "Sending string:%s", sendstr);
 #endif
 			//        OutputStr(mainHwnd,sendstr);
@@ -817,9 +797,9 @@ long attempt_communication(void)
 				temp = WSAGetLastError();
 				if (temp != 10014) {
 					fclose(f);
-					OutputStr(mainHwnd, "Something bad happened.  Please contact cperciva@sfu.ca about this.\n");
+					OutputText(mainHwnd, "Something bad happened.  Please contact cperciva@sfu.ca about this.\n");
 					sprintf(cbuf, "Error in recv: %d\n", temp);
-					OutputStr(mainHwnd, cbuf);
+					OutputText(mainHwnd, cbuf);
 					return(1800);
 				};
 			};
@@ -828,21 +808,21 @@ long attempt_communication(void)
 
 			closesocket(s);
 
-#ifdef DEBUG
+#ifdef _DEBUG
 			fprintf(g, "Received string:%s", sendstr);
 #endif
 			//        OutputStr(mainHwnd,sendstr);
-			temp = processmsg(sendstr);
+			temp = process_message(sendstr);
 			if (temp != 0) {
 				fclose(f);
-#ifdef DEBUG
+#ifdef _DEBUG
 				fclose(g);
 #endif
 				return(temp);
 			};
 		};
 
-#ifdef DEBUG
+#ifdef _DEBUG
 	fclose(g);
 #endif
 
@@ -856,8 +836,8 @@ long attempt_communication(void)
 
 void spoolmsg(char* dat)
 {
-	FILE* f;
-	char* x;
+	FILE* f = NULL;
+	char* x = NULL;
 
 	for (x = dat; *x != 0; x++) if (*x == ' ') *x = '_';
 
@@ -868,7 +848,7 @@ void spoolmsg(char* dat)
 
 BOOL  PASCAL ProxyInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	char cbuf[128];
+	char cbuf[128] = { 0 };
 
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -905,8 +885,8 @@ BOOL  PASCAL ProxyInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 BOOL  PASCAL CpuInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	char cbuf[128];
-	DLGPROC lpProc;
+	char cbuf[128] = { 0 };
+	DLGPROC lpProc = NULL;
 
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -1032,8 +1012,8 @@ BOOL  PASCAL CpuInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 //  Returns 0 if ID_OK, -1 if ID_CANCEL
 int CreateUserInfoWindow()
 {
-	char cbuf[128];
-	DLGPROC lpProc;
+	char cbuf[128] = { 0 };
+	DLGPROC lpProc = NULL;
 
 	lpProc = (DLGPROC)MakeProcInstance(CpuInfo, hInst);
 	if (DialogBox(AppInst, MAKEINTRESOURCE(CPUINFOBOX), mainHwnd, lpProc) == FALSE) {
@@ -1058,12 +1038,14 @@ int CreateUserInfoWindow()
 
 void GetCPUDat(void)
 {
-	SYSTEM_INFO sysinf;
-	double TSCstart, TSCend;
-	double startcount, endcount;
-	double freq;
+	LARGE_INTEGER int64 = { 0 };
 
-	CpuId();
+	SYSTEM_INFO sysinf = { 0 };
+	double TSCstart = 0.0, TSCend = 0.0;
+	double startcount = 0.0, endcount = 0.0;
+	double freq = 0.0;
+
+	cpuid();
 	// Get vendor and version of cpu.
 
 	GetSystemInfo(&sysinf);
@@ -1097,7 +1079,7 @@ void GetCPUDat(void)
 
 void NewUserAuto()
 {
-	char cbuf[128];
+	char cbuf[128] = { 0 };
 
 	GetCPUDat();
 
@@ -1119,29 +1101,29 @@ long compaftercomm;
 
 unsigned __stdcall commthread(void* junk)
 {
-	long delay;
-	char str[256];
+	long delay = 0;
+	char str[256] = { 0 };
 
-	if (connectmethod < 4) OutputStr(mainHwnd, "Attempting to communicate with server\n");
+	if (connectmethod < 4) OutputText(mainHwnd, "Attempting to communicate with server\n");
 
 	for (;;) {
 		delay = attempt_communication();
 		if (delay == 0) {
-			if (connectmethod < 4) OutputStr(mainHwnd, "Finished communicating with server\n");
+			if (connectmethod < 4) OutputText(mainHwnd, "Finished communicating with server\n");
 			if (compaftercomm == 1) {
 				compaftercomm = 0;
 				PostMessage(mainHwnd, WM_COMMAND, MENU_STOP, 0);
 				PostMessage(mainHwnd, WM_COMMAND, MENU_START, 0);
 				//                StartCalc(mainHwnd);
 			};
-			lastcommunicated = GetHighTime();
+			lastcommunicated = get_high_time();
 			sprintf(str, "%d", lastcommunicated);
 			WritePrivateProfileString("Main", "lastcommunicated", str, IniFileName);
 			break;
 		};
 
 		sprintf(str, "PiHex will try again in %d seconds.\n", delay);
-		OutputStr(mainHwnd, str);
+		OutputText(mainHwnd, str);
 
 		for (; delay > 0; delay--) {
 			Sleep(1000);
@@ -1160,7 +1142,7 @@ unsigned __stdcall commthread(void* junk)
 	return(0);
 }
 
-long commblah;
+long commblah = 0;
 
 void request_communication(long startcomputing, long forceattempt)
 {
@@ -1173,7 +1155,7 @@ void request_communication(long startcomputing, long forceattempt)
 				wanttocommunicate = 1;
 				return;
 			};
-			if (lastcommunicated + daysworktoget * 200 > GetHighTime())
+			if (lastcommunicated + daysworktoget * 200 > get_high_time())
 				// we have communicated recently, don't communicate again
 				return;
 		};
@@ -1213,7 +1195,7 @@ void JoinPiHex(void)
 	EnableMenuItem(GetMenu(mainHwnd), MENU_STOP, MF_GRAYED);
 	EnableMenuItem(GetMenu(mainHwnd), MENU_START, MF_GRAYED);
 
-	OutputStr(mainHwnd, "PiHex will now attempt to contact the server to request some work...\n");
+	OutputText(mainHwnd, "PiHex will now attempt to contact the server to request some work...\n");
 	request_communication(1, 1);
 
 	EnableMenuItem(GetMenu(mainHwnd), MENU_QUIT, MF_ENABLED);
@@ -1230,21 +1212,21 @@ void JoinPiHex(void)
  */
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-	DLGPROC lpProc;
-	struct _SYSTEM_POWER_STATUS powstat;
-	char achBuf[40];
+	DLGPROC lpProc = NULL;
+	struct _SYSTEM_POWER_STATUS powstat = { 0 };
+	char achBuf[40] = { 0 };
 
-	RECT rect;
+	RECT rect = { 0 };
 
 	switch (msg) {
 	case WM_COMMAND:
 		switch (LOWORD(wparam)) {
 		case MENU_START:
 			if (joined < 1) JoinPiHex();
-			else StartCalc(hwnd);
+			else calc_start(hwnd);
 			return(0);
 		case MENU_STOP:
-			EndCalc(hwnd);
+			calc_end(hwnd);
 			return(0);
 		case MENU_COMMUNICATE:
 			request_communication(0, 1);
@@ -1257,7 +1239,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			if (MessageBox(hwnd, "Are you sure you want to quit PiHex?\nThis means that this computer will never run PiHex again.", "PiHex", MB_OKCANCEL) != IDOK)
 				return(0);
 
-			EndCalc(hwnd);
+			calc_end(hwnd);
 			pihex_dropout();
 			spoolmsg("dropout\n");
 
@@ -1267,8 +1249,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			EnableMenuItem(GetMenu(hwnd), MENU_JOIN, MF_ENABLED);
 			EnableMenuItem(GetMenu(hwnd), MENU_QUIT, MF_GRAYED);
 
-			OutputStr(mainHwnd, "A message has been spooled to notify the PiHex server that this machine is not going to run PiHex anymore.\n");
-			OutputStr(mainHwnd, "Please allow PiHex to communicate with the server to relay this message.\n");
+			OutputText(mainHwnd, "A message has been spooled to notify the PiHex server that this machine is not going to run PiHex anymore.\n");
+			OutputText(mainHwnd, "Please allow PiHex to communicate with the server to relay this message.\n");
 
 			request_communication(-1, 1);
 			return(0);
@@ -1283,11 +1265,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			CheckMenuItem(GetMenu(hwnd), MENU_TRAY, TRAY_ICON);
 			CheckMenuItem(GetMenu(hwnd), MENU_NOTRAY, NO_ICON);
 			if (TRAY_ICON)
-				TrayMessage(NIM_ADD, AppName, hwnd, AppIcon);
-			else TrayMessage(NIM_DELETE, AppName, hwnd, AppIcon);
+				tray_message(NIM_ADD, AppName, hwnd, AppIcon);
+			else tray_message(NIM_DELETE, AppName, hwnd, AppIcon);
 			return(0);
 		case MENU_NOTRAY:
-			if (TRAY_ICON) TrayMessage(NIM_DELETE, AppName, hwnd, AppIcon);
+			if (TRAY_ICON) tray_message(NIM_DELETE, AppName, hwnd, AppIcon);
 			NO_ICON ^= MF_CHECKED;
 			if (NO_ICON) TRAY_ICON = 0;
 			CheckMenuItem(GetMenu(hwnd), MENU_TRAY, TRAY_ICON);
@@ -1300,11 +1282,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case MENU_SERVICE:
 			service ^= MF_CHECKED;
 			CheckMenuItem(GetMenu(hwnd), MENU_SERVICE, service);
-			SetRegistry();
-			MakeService95();
+			set_registry();
+			make_service_win95();
 			return(0);
 		case MENU_PRIORITY:
-			lpProc = (DLGPROC)MakeProcInstance(Priority, hInst);
+			lpProc = (DLGPROC)MakeProcInstance(get_priority_proc, hInst);
 			DialogBox(AppInst, MAKEINTRESOURCE(PriorityBox), hwnd, lpProc);
 			FreeProcInstance(lpProc);
 			return(0);
@@ -1313,7 +1295,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			else CreateUserInfoWindow();
 			return(0);
 		case MENU_ABOUT:
-			lpProc = (DLGPROC)MakeProcInstance(About, hInst);
+			lpProc = (DLGPROC)MakeProcInstance(about_message_proc, hInst);
 			DialogBox(AppInst, MAKEINTRESOURCE(AboutBox), hwnd, lpProc);
 			FreeProcInstance(lpProc);
 			return(0);
@@ -1322,8 +1304,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 	case WM_TIMER:
 		switch (wparam) {
-		case tStatus:StatusProc(hwnd); return(0);
-		case tTray:TrayMessage(NIM_ADD, AppName, hwnd, AppIcon); return(0);
+		case tStatus:on_status_timer(hwnd); return(0);
+		case tTray:tray_message(NIM_ADD, AppName, hwnd, AppIcon); return(0);
 #ifdef Sample
 		case tSample:SampleProc(); return(0);
 #endif
@@ -1352,17 +1334,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		//Taken from prime.exe
 		//I have no idea how this works
 	case WM_PAINT: {
-		PAINTSTRUCT ps;
-		RECT    r;
-		int     y;
-		int     i;
-		HDC hdc;
+		PAINTSTRUCT ps = { 0 };
+		RECT    r = { 0 };
+		int     y = 0;
+		int     i = 0;
+		HDC hdc = NULL;
 		hdc = BeginPaint(hwnd, &ps);
 		GetClientRect(hwnd, &r);
-		if (lines[0] != NULL)
+		if (Lines[0] != NULL)
 			for (y = r.bottom, i = 1; y > 0 && i < NumLines; i++) {
-				y -= charHeight;
-				TextOut(hdc, 0, y, lines[i], strlen(lines[i]));
+				y -= CharHeight;
+				TextOut(hdc, 0, y, Lines[i], strlen(Lines[i]));
 			}
 		EndPaint(hwnd, &ps);
 		return(0);
@@ -1379,8 +1361,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		mainHwnd = hwnd;
 
 		service = GetPrivateProfileInt("Main", "Service", 0, IniFileName);
-		SetRegistry();
-		if (service) MakeService95();
+		set_registry();
+		if (service) make_service_win95();
 
 		TRAY_ICON = GetPrivateProfileInt("Main", "Trayicon", 8, IniFileName);
 		NO_ICON = GetPrivateProfileInt("Main", "Noicon", 0, IniFileName);
@@ -1411,7 +1393,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		lastcommunicated = GetPrivateProfileInt("Main", "lastcommunicated", 0, IniFileName);
 
-		if (TRAY_ICON) TrayMessage(NIM_ADD, AppName, hwnd, AppIcon);
+		if (TRAY_ICON) tray_message(NIM_ADD, AppName, hwnd, AppIcon);
 
 		GetPrivateProfileString("Main", "Priority", "Auto", achBuf, 40, IniFileName);
 		if (strcmp(achBuf, "Auto"))
@@ -1443,12 +1425,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			{
 				EnableMenuItem(GetMenu(hwnd), MENU_JOIN, MF_GRAYED);
 
-				if (!GetSystemPowerStatus(&powstat)) StartCalc(hwnd);
+				if (!GetSystemPowerStatus(&powstat)) calc_start(hwnd);
 				// If we can't get the Power Status (eg, NT4.0, where the function is not
 				// implemented) start anyway.
 				else
 					if ((powstat.BatteryLifePercent > 75) && (powstat.ACLineStatus > 0))
-						StartCalc(hwnd);
+						calc_start(hwnd);
 				if (TRAY_ICON || NO_ICON) ShowWindow(hwnd, SW_HIDE);
 				else ShowWindow(hwnd, SW_SHOW);
 			}
@@ -1466,7 +1448,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		return(0);
 
 	case WM_DESTROY:
-	done:   if (threadsactive) EndCalc(hwnd);
+	done:   
+		if (threadsactive) calc_end(hwnd);
 		sprintf(achBuf, "%d", NO_ICON);
 		WritePrivateProfileString("Main", "Noicon", achBuf, IniFileName);
 		sprintf(achBuf, "%d", TRAY_ICON);
@@ -1479,7 +1462,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		if (PR_OPT == PR_AUTO)
 			WritePrivateProfileString("Main", "Priority", "Auto", IniFileName);
 		else WritePrivateProfileString("Main", "Priority", achBuf, IniFileName);
-		if (TRAY_ICON) TrayMessage(NIM_DELETE, AppName, hwnd, AppIcon);
+		if (TRAY_ICON) tray_message(NIM_DELETE, AppName, hwnd, AppIcon);
 
 		GetWindowRect(hwnd, &rect);
 		sprintf(achBuf, "%d,%d,%d,%d", rect.left, rect.right, rect.top, rect.bottom);
@@ -1493,16 +1476,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 void Findini(void)
 {
-	char dir[128];
-	char winfname[128];
-	char curfname[128];
-	char s[256];
-	char sect[80];
-	char value[80];
-	char* tempc;
-	FILE* f;
-	FILE* g;
-	long temp;
+	char dir[128] = { 0 };
+	char winfname[128] = { 0 };
+	char curfname[128] = { 0 };
+	char s[256] = { 0 };
+	char sect[80] = { 0 };
+	char value[80] = { 0 };
+	char* tempc = NULL;
+	FILE* f = NULL;
+	FILE* g = NULL;
+	long temp = 0;
 
 	GetCurrentDirectory(128, dir);
 	sprintf(curfname, "%s\\%s", dir, iniName);
@@ -1599,11 +1582,11 @@ void Findini(void)
 	WritePrivateProfileString("Main", "PiHexVer", "600", IniFileName);
 }
 
-void SetRegistry(void)
+void set_registry(void)
 {
-	HKEY hkey;
-	DWORD temp;
-	char cbuf[256];
+	HKEY hkey = NULL;
+	DWORD temp = 0;
+	char cbuf[256] = { 0 };
 
 	RegCreateKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\RunServices", 0, NULL,
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hkey, &temp);
@@ -1617,22 +1600,22 @@ void SetRegistry(void)
 	RegCloseKey(hkey);
 };
 
-void MakeService95(void)
+void make_service_win95(void)
 {
-	HMODULE hlib;
-	DWORD(__stdcall * proc)(DWORD, DWORD);
-	DWORD   rc;
+	HMODULE hlib = NULL;
+	DWORD (__stdcall * proc)(DWORD, DWORD);
+	DWORD rc = 0;
 
 	/* Call RegisterServiceProcess in the Kernel */
 
 	hlib = LoadLibrary("KERNEL32.DLL");
-	if (!hlib) { OutputStr(mainHwnd, "Could not load KERNEL32.DLL\n"); return; };
+	if (!hlib) { OutputText(mainHwnd, "Could not load KERNEL32.DLL\n"); return; };
 	proc = (DWORD(__stdcall*)(DWORD, DWORD)) GetProcAddress(hlib, "RegisterServiceProcess");
-	if (proc == NULL) OutputStr(mainHwnd, "Unable to find RegisterServiceProcess\n");
+	if (proc == NULL) OutputText(mainHwnd, "Unable to find RegisterServiceProcess\n");
 	else {
 		if (service) rc = (*proc)(0, 1);
 		else rc = (*proc)(0, 0);
-		if (!rc) OutputStr(mainHwnd, "RegisterServiceProcess failed\n");
+		if (!rc) OutputText(mainHwnd, "RegisterServiceProcess failed\n");
 	}
 	FreeLibrary(hlib);
 };
@@ -1643,11 +1626,11 @@ void MakeService95(void)
 
 int WINAPI WinMain(HINSTANCE this_inst, HINSTANCE prev_inst, LPSTR cmdline, int cmdshow)
 {
-	MSG         msg;
-	WNDCLASS    wc;
-	HWND        hwnd;
+	MSG         msg = { 0 };
+	WNDCLASS    wc = { 0 };
+	HWND        hwnd = 0;
 
-	char cbuf[256];
+	char cbuf[256] = { 0 };
 
 	GetModuleFileName(NULL, cbuf, 255);
 	strrchr(cbuf, '\\')[1] = 0;
@@ -1737,46 +1720,43 @@ int WINAPI WinMain(HINSTANCE this_inst, HINSTANCE prev_inst, LPSTR cmdline, int 
 void  PASCAL LineFeed(
 	HWND    hWnd)
 {
-	char* p;
-	SIZE s;
+	char* p = NULL;
+	SIZE s = { 0 };
 
-	if (lines[0] != NULL) {
-		p = lines[NumLines - 1];
-		memmove(&lines[1], &lines[0], (NumLines - 1) * sizeof(char*));
-		lines[0] = p;
+	if (Lines[0] != NULL) {
+		p = Lines[NumLines - 1];
+		memmove(&Lines[1], &Lines[0], (NumLines - 1) * sizeof(char*));
+		Lines[0] = p;
 		*p = 0;
 	}
 
-	if (charHeight == 0)
+	if (CharHeight == 0)
 	{
 		GetTextExtentPoint(GetDC(hWnd), "A", 1, &s);
-		charHeight = s.cy;
+		CharHeight = s.cy;
 	}
 
-	ScrollWindow(hWnd, 0, -charHeight, NULL, NULL);
+	ScrollWindow(hWnd, 0, -CharHeight, NULL, NULL);
 	UpdateWindow(hWnd);
 }
 
-void  PASCAL OutputStr(
+void  PASCAL OutputText(
 	HWND    hWnd,
 	LPSTR   str)
 {
-	char* p;
-	int     i;
+	char* p = NULL;
+	int i = 0;
 
-	if (lines[0] == NULL) {
+	if (Lines[0] == NULL) {
 		for (i = 0; i < NumLines; i++) {
-			lines[i] = &linebuf[i * LineLength];
-			*lines[i] = 0;
+			Lines[i] = &LineBuffer[i * LineLength];
+			*Lines[i] = 0;
 		}
 	}
-	p = lines[0] + strlen(lines[0]);
+	p = Lines[0] + strlen(Lines[0]);
 	for (; *str; str++) {
-		if (*str == '\n') *p = 0, LineFeed(hWnd), p = lines[0];
+		if (*str == '\n') *p = 0, LineFeed(hWnd), p = Lines[0];
 		else *p++ = *str;
 	}
 	*p = 0;
-
 }
-
-

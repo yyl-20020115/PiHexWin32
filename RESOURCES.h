@@ -59,5 +59,5 @@
 #define CPUINFOBOX              103
 #define PROXYINFOBOX            104
 
-#define NumLines        64
-#define LineLength        128
+#define NumLines				64
+#define LineLength				128

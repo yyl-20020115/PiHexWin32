@@ -1,5 +1,5 @@
 #pragma once
-extern void __pascal CPUID_PROC(void);
+extern void PASCAL CPUID_PROC(void);
 extern unsigned char CPUTYPE;
 extern char VENDOR[];
 extern long CPUVENDOR;

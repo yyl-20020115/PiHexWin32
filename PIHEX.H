@@ -2,7 +2,7 @@
 #define MAXTHREADS			256
 #define ThreadDataSize		768
 
-#ifdef DEBUG
+#ifdef _DEBUG
 #define sAppClass            "PiHexDbgClass"
 #define sAppName             "PiHex Beta"
 #define sIniName             "Pihexdbg.ini"
