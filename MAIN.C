@@ -1087,11 +1087,17 @@ void GetCPUDat(void)
 	// Get # of cpus.
 
 	// We want to compute the cpu speed in MHz.
-	if (cputype < 5) { cpuspeed = 33; return; }
+	if (cputype < 5) {
+		cpuspeed = 33; 
+		return; 
+	}
 	// 386 and 486 computers don't have TSC, so they are a pain to compute.
 	// We don't have many anyway, so just call them 33Mhz.
 
-	if (!QueryPerformanceFrequency(&int64)) { cpuspeed = 66; return; }
+	if (!QueryPerformanceFrequency(&int64)) { 
+		cpuspeed = 66; 
+		return; 
+	}
 	// If counter is not available, guess 66MHz.
 
 	freq = int64.QuadPart;// fild();
@@ -1145,18 +1151,19 @@ unsigned int PASCAL commthread(void* junk)
 	for (;;) {
 		delay = attempt_communication();
 		if (delay == 0) {
-			if (connectmethod < 4) OutputText(mainHwnd, "Finished communicating with server\n");
+			if (connectmethod < 4) 
+				OutputText(mainHwnd, "Finished communicating with server\n");
 			if (compaftercomm == 1) {
 				compaftercomm = 0;
 				PostMessage(mainHwnd, WM_COMMAND, MENU_STOP, 0);
 				PostMessage(mainHwnd, WM_COMMAND, MENU_START, 0);
 				//                StartCalc(mainHwnd);
-			};
+			}
 			lastcommunicated = get_high_time();
 			sprintf(str, "%d", lastcommunicated);
 			WritePrivateProfileString("Main", "lastcommunicated", str, IniFileName);
 			break;
-		};
+		}
 
 		sprintf(str, "PiHex will try again in %d seconds.\n", delay);
 		OutputText(mainHwnd, str);
@@ -1164,10 +1171,10 @@ unsigned int PASCAL commthread(void* junk)
 		for (; delay > 0; delay--) {
 			Sleep(100);
 			if (communicating == 0) break;
-		};
+		}
 
 		if (communicating == 0) break;
-	};
+	}
 
 	wanttocommunicate = 0;
 	communicating = 0;
