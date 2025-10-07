@@ -263,7 +263,7 @@ void newrange(struct threaddat* dat)
 			, dat->current_pos[1], dat->current_pos[0]
 			, pisum1[3], pisum1[2], pisum1[1], pisum1[0]);
 
-		spoolmsg(outstr);
+		spool_message(outstr);
 	};
 
 	sprintf(Thname, "Thread%d", dat->threadnum);
@@ -284,8 +284,8 @@ void newrange(struct threaddat* dat)
 	if (mcp != 0) {
 		sprintf(outstr, "donerange,%d\n", mcp);
 		tell_server_hours();
-		spoolmsg(outstr);
-		spoolmsg("getrange\n");
+		spool_message(outstr);
+		spool_message("getrange\n");
 		WritePrivateProfileString(Thname, "lastr", "0", IniFileName);
 
 		rangeswaiting--;
@@ -418,7 +418,7 @@ void PASCAL calc_thread_init(LPVOID p)
 }
 
 long calc_error = 0;
-char calc_Status[256] = { 0 };
+char calc_status[256] = { 0 };
 char calc_Tip[256] = { 0 };
 long oldprogress = 0;
 long oldtcount = 0;
@@ -439,17 +439,17 @@ void PASCAL calc_main_status(void)
 	{
 		tf = progress[0] - oldprogress;
 		tf = tf * numclocks / 1000. / (tl - oldtcount);
-		sprintf(calc_Status, "%f%% done,%fMHz", fracdone, tf);
+		sprintf(calc_status, "%f%% done,%fMHz", fracdone, tf);
 	}
 	else
 	{
-		sprintf(calc_Status, "%f%% done", fracdone);
+		sprintf(calc_status, "%f%% done", fracdone);
 	};
 	oldtcount = tl;
 	oldprogress = progress[0];
 	sprintf(calc_Tip, "PiHex %f%% done", fracdone);
 
-	if (error) { sprintf(calc_Status, "%s", ErrMsg); calc_error = 1; return; };
+	if (error) { sprintf(calc_status, "%s", ErrMsg); calc_error = 1; return; };
 	calc_error = 0;
 };
 
@@ -481,7 +481,7 @@ void PASCAL calc_thread_done(LPVOID p)
 			, dat->current_pos[1], dat->current_pos[0]
 			, pisum1[3], pisum1[2], pisum1[1], pisum1[0]);
 
-		spoolmsg(outstr);
+		spool_message(outstr);
 	};
 
 	sprintf(Thname, "Thread%d", dat->threadnum);

@@ -68,7 +68,7 @@ FILE* timesfl;
 long tscval[2] = { 0 };
 void process_input(void);
 void tray_message(UINT message, LPCSTR prompt, HWND hwnd, UINT Icon);
-unsigned int PASCAL calc_thread_proc(LPVOID threaddat);
+UINT PASCAL calc_thread_proc(LPVOID threaddat);
 void make_service_win95(void);
 void set_registry(void);
 
@@ -81,7 +81,7 @@ void tell_server_hours(void)
 {
 	char cbuf[256] = { 0 };
 	sprintf(cbuf, "change,%s,%s,%d,%d,%d,%d,%f,%f\ngetrtime\n", UserName, Useremail, cpuvendor, cputype, cpuspeed, cpunum, hoursworkperday, daysworktoget);
-	spoolmsg(cbuf);
+	spool_message(cbuf);
 };
 
 void update_hours(float cav)
@@ -190,8 +190,8 @@ void on_status_timer(HWND Hwnd)                      //triggered by WM_TIMER
 	HANDLE hFind = { 0 };
 
 	calc_main_status();
-	if (strlen(calc_Status) > 0) {
-		OutputText(mainHwnd, calc_Status);
+	if (strlen(calc_status) > 0) {
+		OutputText(mainHwnd, calc_status);
 		LineFeed(mainHwnd);
 	}
 
@@ -199,7 +199,8 @@ void on_status_timer(HWND Hwnd)                      //triggered by WM_TIMER
 		request_communication(0, 0);
 	// We have not communicated recently.  Communicate
 
-	if (wanttocommunicate && (!communicating)) OutputText(mainHwnd, "PiHex would like to communicate with the server.");
+	if (wanttocommunicate && (!communicating))
+		OutputText(mainHwnd, "PiHex would like to communicate with the server.");
 	if (connectmethod / 2 == 2) {
 		hFind = FindFirstFile("output.txt", &find_data);
 		if (hFind != INVALID_HANDLE_VALUE) {     //file exists
@@ -220,8 +221,10 @@ void on_status_timer(HWND Hwnd)                      //triggered by WM_TIMER
 		FlashWindow(Hwnd, TRUE);
 	}
 	if (TRAY_ICON) {
-		if (windowflashed) tray_message(NIM_MODIFY, calc_Tip, Hwnd, BlackIcon);
-		else tray_message(NIM_MODIFY, calc_Tip, Hwnd, AppIcon);
+		if (windowflashed) 
+			tray_message(NIM_MODIFY, calc_Tip, Hwnd, BlackIcon);
+		else 
+			tray_message(NIM_MODIFY, calc_Tip, Hwnd, AppIcon);
 	}
 }
 
@@ -253,7 +256,9 @@ unsigned int PASCAL calc_thread_proc(LPVOID p)
 	calc_thread_init(tmpdat);
 
 	curpr = thrdpr;
-	if (curpr > -3) SetThreadPriority(GetCurrentThread(), curpr); else
+	if (curpr > -3) 
+		SetThreadPriority(GetCurrentThread(), curpr);
+	else
 		SetThreadPriority(GetCurrentThread(), -15);
 
 	do {
@@ -280,8 +285,8 @@ unsigned int PASCAL calc_thread_proc(LPVOID p)
 
 	if (tmpdat->threadnum == -1) {
 		calc_main_status();
-		if (strlen(calc_Status) > 0) {
-			OutputText(mainHwnd, calc_Status);
+		if (strlen(calc_status) > 0) {
+			OutputText(mainHwnd, calc_status);
 			LineFeed(mainHwnd);
 		}
 	}                            //if thread exited by itself, print any error 
@@ -318,12 +323,26 @@ unsigned int PASCAL calc_thread_proc(LPVOID p)
 void cpuid(void)
 {
 	CPUID_PROC();
-
-	if (strcmp(VENDOR, "GenuineIntel") == 0) { CPUVENDOR = CPU_INTEL; }
-	else if (strcmp(VENDOR, "AuthenticAMD") == 0) { CPUVENDOR = CPU_AMD; }
-	else if (strcmp(VENDOR, "CyrixInstead") == 0) { CPUVENDOR = CPU_CYRIX; }
-	else if (strcmp(VENDOR, "CentaurHauls") == 0) { CPUVENDOR = CPU_IDT; }
-	else CPUVENDOR = CPU_UNKNOWN;
+	if (strcmp(VENDOR, "GenuineIntel") == 0) 
+	{ 
+		CPUVENDOR = CPU_INTEL; 
+	}
+	else if (strcmp(VENDOR, "AuthenticAMD") == 0) 
+	{ 
+		CPUVENDOR = CPU_AMD; 
+	}
+	else if (strcmp(VENDOR, "CyrixInstead") == 0) 
+	{ 
+		CPUVENDOR = CPU_CYRIX; 
+	}
+	else if (strcmp(VENDOR, "CentaurHauls") == 0) 
+	{ 
+		CPUVENDOR = CPU_IDT; 
+	}
+	else
+	{
+		CPUVENDOR = CPU_UNKNOWN;
+	}
 };
 
 void calc_start(HWND hwnd)
@@ -464,8 +483,10 @@ void tray_message(UINT message, LPCSTR prompt, HWND hwnd, UINT Icon)
 BOOL PASCAL about_message_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
-	case WM_INITDIALOG:return(TRUE);
-	case WM_COMMAND:if (wParam == IDOK || wParam == IDCANCEL)
+	case WM_INITDIALOG:
+		return(TRUE);
+	case WM_COMMAND:
+		if (wParam == IDOK || wParam == IDCANCEL)
 	{
 		EndDialog(hwnd, TRUE);
 		return(TRUE);
@@ -484,18 +505,25 @@ BOOL PASCAL get_priority_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		switch (wParam) {
 		case IDOK:
-			if (IsDlgButtonChecked(hwnd, PR_1)) PR_OPT = PR_1;
-			if (IsDlgButtonChecked(hwnd, PR_2)) PR_OPT = PR_2;
-			if (IsDlgButtonChecked(hwnd, PR_3)) PR_OPT = PR_3;
-			if (IsDlgButtonChecked(hwnd, PR_4)) PR_OPT = PR_4;
-			if (IsDlgButtonChecked(hwnd, PR_5)) PR_OPT = PR_5;
-			if (IsDlgButtonChecked(hwnd, PR_AUTO)) PR_OPT = PR_AUTO;
+			if (IsDlgButtonChecked(hwnd, PR_1)) 
+				PR_OPT = PR_1;
+			if (IsDlgButtonChecked(hwnd, PR_2)) 
+				PR_OPT = PR_2;
+			if (IsDlgButtonChecked(hwnd, PR_3)) 
+				PR_OPT = PR_3;
+			if (IsDlgButtonChecked(hwnd, PR_4)) 
+				PR_OPT = PR_4;
+			if (IsDlgButtonChecked(hwnd, PR_5)) 
+				PR_OPT = PR_5;
+			if (IsDlgButtonChecked(hwnd, PR_AUTO)) 
+				PR_OPT = PR_AUTO;
 			if (PR_OPT == PR_AUTO)
 			{
 				if (threadsactive) SetThreadPriority((HANDLE)_beginthreadex(NULL, 0, cpu_free_time,
 					NULL, 0, (unsigned*)&cftblah), 2);
 			}
-			else thrdpr = PR_OPT - PR_4;
+			else 
+				thrdpr = PR_OPT - PR_4;
 		case IDCANCEL:
 			EndDialog(hwnd, TRUE);
 			break;
@@ -517,25 +545,29 @@ long process_message(char* dat)
 	if (0 == strncmp(dat, "HTTP", 4))
 	{
 		dat1 = strstr(dat, "\r\n\r\n");
-		if (dat1 != NULL) dat1 += 2;
-
-		if (dat1 == NULL) dat1 = strstr(dat, "\n\n");
-		if (dat1 != NULL) dat1 += 2;
-
+		if (dat1 != NULL) 
+			dat1 += 2;
+		if (dat1 == NULL) 
+			dat1 = strstr(dat, "\n\n");
+		if (dat1 != NULL) 
+			dat1 += 2;
 		if (dat1 == NULL) {
 			OutputText(mainHwnd, "The server has sent back an invalid reply.\nThis should never occur.\n");
 			return(1800);
-		};
+		}
 	}
-	else dat1 = dat;
-
+	else 
+	{
+		dat1 = dat;
+	}
 	if (strncmp(dat1, "computernum,", 12) == 0) {
 		sscanf(dat1 + 12, "%d", &computernum);
 		sprintf(dat1, "%d", computernum);
 		WritePrivateProfileString("Main", "computernum", dat1, IniFileName);
 	}
 	else
-		if (strncmp(dat1, "range,", 6) == 0) {
+	{
+		if (0 == strncmp(dat1, "range,", 6)) {
 			f = fopen("range0.ini", "r");
 			if (f != NULL) {
 				fclose(f);
@@ -544,7 +576,7 @@ long process_message(char* dat)
 			else
 			{
 				f = fopen("range0.ini", "wt");
-			};
+			}
 
 			*(dat1 + 22) = 0;
 			*(dat1 + 31) = 0;
@@ -567,7 +599,8 @@ long process_message(char* dat)
 				sprintf(cbuf, "%f", time * 8.382);
 				WritePrivateProfileString("Main", "rtime", cbuf, IniFileName);
 			}
-			else {
+			else 
+			{
 				if (strncmp(dat1, "ignoreme", 8) == 0) {
 				}
 				else
@@ -578,7 +611,7 @@ long process_message(char* dat)
 				}
 			}
 		}
-
+	}
 	return(0);
 }
 
@@ -607,7 +640,7 @@ void process_input(void)
 	};
 	fclose(f);
 	remove("input.txt");
-};
+}
 
 typedef DWORD(APIENTRY* TRasEnumConnectionsA)(LPRASCONNA, LPDWORD, LPDWORD);
 typedef DWORD(APIENTRY* TRasGetConnectStatusA)(HRASCONN, LPRASCONNSTATUSA);
@@ -647,11 +680,8 @@ long check_modem_connection(void)
 	size = 0;
 	entrynum = 0;
 	(PRasEnumConnectionsA)(NULL, &size, &entrynum);
-
 	connlist = (RASCONN*)malloc(size + sizeof(RASCONN));
-
 	connlist->dwSize = sizeof(RASCONN);
-
 	temp = (PRasEnumConnectionsA)(connlist, &size, &entrynum);
 
 	if (temp) {
@@ -793,7 +823,7 @@ long attempt_communication(void)
 				fclose(g);
 #endif
 				return(1800);
-			};
+			}
 
 			err = connect(s, (SOCKADDR*)&sn, sizeof(sn));
 			if (err != 0) {
@@ -803,7 +833,7 @@ long attempt_communication(void)
 				fclose(g);
 #endif
 				return(1800);
-			};
+			}
 
 			temp = computernum;
 			if (strncmp(dat, "newuser", 6) == 0) temp = -1;
@@ -831,8 +861,8 @@ long attempt_communication(void)
 					sprintf(cbuf, "Error in recv: %d\n", temp);
 					OutputText(mainHwnd, cbuf);
 					return(1800);
-				};
-			};
+				}
+			}
 
 			sendstr[len] = 0;
 
@@ -849,8 +879,8 @@ long attempt_communication(void)
 				fclose(g);
 #endif
 				return(temp);
-			};
-		};
+			}
+		}
 	}
 
 #ifdef _DEBUG
@@ -865,7 +895,7 @@ long attempt_communication(void)
 };
 
 
-void spoolmsg(char* dat)
+void spool_message(char* dat)
 {
 	FILE* f = NULL;
 	char* x = NULL;
@@ -1066,7 +1096,7 @@ int CreateUserInfoWindow()
 	else
 		sprintf(cbuf, "change,%s,%s,%d,%d,%d,%d,%f,%f\ngetrtime\n", UserName, Useremail, cpuvendor, cputype, cpuspeed, cpunum, hoursworkperday, daysworktoget);
 
-	spoolmsg(cbuf);
+	spool_message(cbuf);
 
 	return(0);
 }
@@ -1135,7 +1165,7 @@ void NewUserAuto()
 
 	sprintf(cbuf, "ignoreme\nnewuser,%s,%s,%d,%d,%d,%d,%f,%f\ngetrange\ngetrange\ngetrtime\n", UserName, Useremail, cpuvendor, cputype, cpuspeed, cpunum, hoursworkperday, daysworktoget);
 
-	spoolmsg(cbuf);
+	spool_message(cbuf);
 }
 
 long compaftercomm = 0;
@@ -1189,19 +1219,21 @@ long commblah = 0;
 
 void request_communication(long startcomputing, long forceattempt)
 {
-	if (startcomputing == 1) compaftercomm = 1;
-	if (startcomputing == -1) compaftercomm = 0;
+	if (startcomputing == 1) 
+		compaftercomm = 1;
+	if (startcomputing == -1) 
+		compaftercomm = 0;
 	if (communicating == 0)
 	{
 		if (!forceattempt) {
 			if (autoconn == 0) {
 				wanttocommunicate = 1;
 				return;
-			};
+			}
 			if (lastcommunicated + daysworktoget * 200 > get_high_time())
 				// we have communicated recently, don't communicate again
 				return;
-		};
+		}
 
 		EnableMenuItem(GetMenu(mainHwnd), MENU_COMMSTOP, MF_ENABLED);
 		EnableMenuItem(GetMenu(mainHwnd), MENU_COMMUNICATE, MF_GRAYED);
@@ -1287,7 +1319,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			calc_end(hwnd);
 			pihex_dropout();
-			spoolmsg("dropout\n");
+			spool_message("dropout\n");
 
 			joined = 0;
 			WritePrivateProfileString("Main", "joined", "0", IniFileName);
@@ -1351,8 +1383,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 	case WM_TIMER:
 		switch (wparam) {
-		case tStatus:on_status_timer(hwnd); return(0);
-		case tTray:tray_message(NIM_ADD, AppName, hwnd, AppIcon); return(0);
+		case tStatus:
+			on_status_timer(hwnd); 
+			return(0);
+		case tTray:
+			tray_message(NIM_ADD, AppName, hwnd, AppIcon); 
+			return(0);
 #ifdef Sample
 		case tSample:SampleProc(); return(0);
 #endif
@@ -1673,10 +1709,11 @@ void set_registry(void)
 		GetModuleFileName(NULL, cbuf, 255);
 		RegSetValueEx(hkey, "PiHex", 0, REG_SZ, (const BYTE*)cbuf, strlen(cbuf) + 1);
 	}
-	else RegDeleteValue(hkey, "PiHex");
-
+	else {
+		RegDeleteValue(hkey, "PiHex");
+	}
 	RegCloseKey(hkey);
-};
+}
 
 void make_service_win95(void)
 {
@@ -1700,7 +1737,7 @@ void make_service_win95(void)
 			OutputText(mainHwnd, "RegisterServiceProcess failed\n");
 	}
 	FreeLibrary(hlib);
-};
+}
 
 /*
  * WinMain - initialization, message loop
@@ -1736,7 +1773,7 @@ int WINAPI WinMain(HINSTANCE this_inst, HINSTANCE prev_inst, LPSTR cmdline, int 
 		ShowWindow(hwnd, SW_SHOW);
 		SetForegroundWindow(hwnd);
 		return FALSE;
-	};
+	}
 
 
 	//  TODO 6.1: Add code to cpufreetime so that if less than 5% of cpu time is idle, we don't use any.

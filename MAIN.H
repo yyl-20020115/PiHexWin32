@@ -19,7 +19,7 @@ long PASCAL calc_main_init(void);
 //          zero otherwise.
 
 void PASCAL calc_main_status(void);
-extern char calc_Status[];
+extern char calc_status[];
 extern char calc_Tip[];
 // calc_main_status is called approximately once every second.
 // It should write into calc_Status and calc_Tip.
@@ -54,7 +54,7 @@ extern void PASCAL calc_thread_dowork(LPVOID dat);
 
 extern void pihex_dropout(void);
 
-extern void spoolmsg(char* dat);
+extern void spool_message(char* dat);
 // Provided by main.c;  writes a message to the spool file.
 
 extern void request_communication(long startcomputing, long forceattempt);
