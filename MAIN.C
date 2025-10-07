@@ -267,7 +267,10 @@ unsigned int PASCAL calc_thread_proc(LPVOID p)
 #ifdef times
 		st = rdtsc();
 #endif
-		if (disablecomputing < 1) calc_thread_dowork(tmpdat); else Sleep(500 * (disablecomputing + 1));
+		if (disablecomputing < 1) 
+			calc_thread_dowork(tmpdat);
+		else 
+			Sleep(500 * (disablecomputing + 1));
 #ifdef times
 		st = rdtsc() - st;
 		longst = st;
@@ -304,7 +307,7 @@ unsigned int PASCAL calc_thread_proc(LPVOID p)
 		//if this is last thread still active, stop calculating.
 
 		do {
-			Sleep(0);
+			Sleep(100);
 		} while (cont);
 	}  //don't exit until EndCalc actually gets called.
 
@@ -355,7 +358,7 @@ void calc_start(HWND hwnd)
 			0, (unsigned*)&CalcThreadIds[thnum]);          //and create it
 	}
 
-	Sleep(1000);
+	Sleep(500);
 	StatusTimer = SetTimer(hwnd, tStatus, 5000, NULL);
 #ifdef Sample
 	SampleFile = fopen(Samplefn, "at");
@@ -397,7 +400,7 @@ void calc_end(HWND hwnd)
 		//even if some other programs are sucking up CPU cycles.
 
 	do
-		Sleep(0);
+		Sleep(100);
 	while (threadsactive);
 
 
@@ -447,7 +450,7 @@ void tray_message(UINT message, LPCSTR prompt, HWND hwnd, UINT Icon)
 	notify_data.uCallbackMessage = WM_TRAY;
 	notify_data.hIcon = LoadIcon((HINSTANCE)AppInst, MAKEINTRESOURCE(Icon));
 
-	if ((!Shell_NotifyIcon(message, &notify_data)) && (message == NIM_ADD) && (!TrayTimer))
+	if ((Shell_NotifyIcon(message, &notify_data)) && (message == NIM_ADD) && (!TrayTimer))
 	{
 		TrayTimer = SetTimer(hwnd, tTray, 1000, NULL);
 	}
@@ -1159,7 +1162,7 @@ unsigned int PASCAL commthread(void* junk)
 		OutputText(mainHwnd, str);
 
 		for (; delay > 0; delay--) {
-			Sleep(1000);
+			Sleep(100);
 			if (communicating == 0) break;
 		};
 
@@ -1302,7 +1305,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			CheckMenuItem(GetMenu(hwnd), MENU_NOTRAY, NO_ICON);
 			if (TRAY_ICON)
 				tray_message(NIM_ADD, AppName, hwnd, AppIcon);
-			else tray_message(NIM_DELETE, AppName, hwnd, AppIcon);
+			else
+				tray_message(NIM_DELETE, AppName, hwnd, AppIcon);
 			return(0);
 		case MENU_NOTRAY:
 			if (TRAY_ICON) tray_message(NIM_DELETE, AppName, hwnd, AppIcon);
