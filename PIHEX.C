@@ -362,8 +362,10 @@ void PASCAL calc_progress(struct threaddat* dat)
 		dat->threadnum = -1;
 	};
 
-	if (rangeswaiting < 1) request_communication(0, 0);
-
+	if (rangeswaiting < 1)
+	{
+		request_communication(0, 0);
+	}
 	t = progress[0];
 	progress[0] += 16;
 	if (progress[0] < t) progress[1]++;         //carry

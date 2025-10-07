@@ -18,7 +18,7 @@ LRESULT CALLBACK WindowProc(HWND, UINT, WPARAM, LPARAM);
 
 // Taken from prime.exe
 static char* Lines[NumLines] = { 0 };
-static char LineBuffer[NumLines * LineLength];
+static char LineBuffer[NumLines * LineLength] = { 0 };
 static int  CharHeight = 0;
 void PASCAL OutputText(HWND hWnd, LPSTR str);
 void PASCAL LineFeed(HWND hWnd);
@@ -72,7 +72,7 @@ unsigned int PASCAL calc_thread_proc(LPVOID threaddat);
 void make_service_win95(void);
 void set_registry(void);
 
-struct thdat 
+struct thdat
 {
 	long threadnum;
 };
@@ -80,7 +80,6 @@ struct thdat
 void tell_server_hours(void)
 {
 	char cbuf[256] = { 0 };
-
 	sprintf(cbuf, "change,%s,%s,%d,%d,%d,%d,%f,%f\ngetrtime\n", UserName, Useremail, cpuvendor, cputype, cpuspeed, cpunum, hoursworkperday, daysworktoget);
 	spoolmsg(cbuf);
 };
@@ -88,7 +87,6 @@ void tell_server_hours(void)
 void update_hours(float cav)
 {
 	char cbuf[256] = { 0 };
-
 	hoursworkperday = 1.0 / (0.99 / hoursworkperday + 0.01 / cav);
 	sprintf(cbuf, "%f", hoursworkperday);
 	WritePrivateProfileString("Main", "hoursperday", cbuf, IniFileName);
@@ -137,21 +135,21 @@ unsigned int PASCAL cpu_free_time(void* thd)
 		{
 			tottime += ctc - atc;
 			if (btc + 25 < ctc) busytime += ctc - atc;
-		};
+		}
 		if (atc + 525 * max(disablecomputing, 1) > btc) {
 			disablecomputing = (disablecomputing - 9) / 2;
 			if ((disablecomputing >= -5) && (disablecomputing < -1)) {
 				StatusTimer = SetTimer(mainHwnd, tStatus, 5000, NULL);
 				//                OutputStr(mainHwnd,"Restarted Timer");
-			};
+			}
 		}
 		else {
 			disablecomputing = min(disablecomputing + 1, 1000000000);
 			if (disablecomputing == -1) {
 				KillTimer(mainHwnd, StatusTimer);
 				//                OutputStr(mainHwnd,"Killed Timer");
-			};
-		};
+			}
+		}
 
 		busytime -= busytime / 100;
 		tottime -= tottime / 100;
@@ -162,14 +160,14 @@ unsigned int PASCAL cpu_free_time(void* thd)
 			tottime = 15000;
 			thrdpr += 1;
 			if (thrdpr > 1) thrdpr = 1;
-		};
+		}
 		if (busytime * 4 < tottime)
 		{
 			busytime = 10000;
 			tottime = 15000;
 			thrdpr -= 1;
 			if (thrdpr < -3) thrdpr = -3;
-		};
+		}
 
 	} while (cont && (PR_OPT == PR_AUTO));
 	return 0;
@@ -184,7 +182,7 @@ DWORD get_high_time(void)
 	SystemTimeToFileTime(&systime, &ftime);
 
 	return(ftime.dwHighDateTime);
-};
+}
 
 void on_status_timer(HWND Hwnd)                      //triggered by WM_TIMER
 {
@@ -195,9 +193,10 @@ void on_status_timer(HWND Hwnd)                      //triggered by WM_TIMER
 	if (strlen(calc_Status) > 0) {
 		OutputText(mainHwnd, calc_Status);
 		LineFeed(mainHwnd);
-	};
+	}
 
-	if (lastcommunicated + daysworktoget * 400 < get_high_time()) request_communication(0, 0);
+	if (lastcommunicated + daysworktoget * 400 < get_high_time())
+		request_communication(0, 0);
 	// We have not communicated recently.  Communicate
 
 	if (wanttocommunicate && (!communicating)) OutputText(mainHwnd, "PiHex would like to communicate with the server.");
@@ -206,14 +205,14 @@ void on_status_timer(HWND Hwnd)                      //triggered by WM_TIMER
 		if (hFind != INVALID_HANDLE_VALUE) {     //file exists
 			OutputText(mainHwnd, "Please send output.txt to the PiHex server (see readme.txt)\n");
 			FindClose(hFind);
-		};
+		}
 
 		hFind = FindFirstFile("input.txt", &find_data);
 		if (hFind != INVALID_HANDLE_VALUE) {     //file exists
 			FindClose(hFind);
 			process_input();
-		};
-	};
+		}
+	}
 
 	if (calc_error || windowflashed || wanttocommunicate)
 	{
@@ -263,8 +262,7 @@ unsigned int PASCAL calc_thread_proc(LPVOID p)
 			curpr = thrdpr;
 			if (curpr > -3) SetThreadPriority(GetCurrentThread(), curpr); else
 				SetThreadPriority(GetCurrentThread(), -15);
-		};
-
+		}
 
 #ifdef times
 		st = rdtsc();
@@ -282,7 +280,7 @@ unsigned int PASCAL calc_thread_proc(LPVOID p)
 		if (strlen(calc_Status) > 0) {
 			OutputText(mainHwnd, calc_Status);
 			LineFeed(mainHwnd);
-		};
+		}
 	}                            //if thread exited by itself, print any error 
 								 //message it put into calc_Status
 
@@ -292,17 +290,22 @@ unsigned int PASCAL calc_thread_proc(LPVOID p)
 		threadsactive--;
 		HeapFree(GetProcessHeap(), 0, threaddat);
 		return(0);
-	};
+	}
 
 	HeapFree(GetProcessHeap(), 0, threaddat);
 
-	do { Sleep(0); } while (calc_error && cont);     //don't exit until user tells us to if there is an error
+	do {
+		Sleep(100);
+	} while (calc_error && cont);
+	//don't exit until user tells us to if there is an error
 
 	if (threadsactive == 1) {
 		PostMessage(mainHwnd, WM_COMMAND, MENU_STOP, 0);
 		//if this is last thread still active, stop calculating.
 
-		do { Sleep(0); } while (cont);
+		do {
+			Sleep(0);
+		} while (cont);
 	}  //don't exit until EndCalc actually gets called.
 
 	threadsactive--;
@@ -336,14 +339,15 @@ void calc_start(HWND hwnd)
 	timesfl = fopen(timesfn, "at");
 #endif
 
-
 	threads = calc_main_init();
 	if (threads)          //if code supports multiple (calculating) threads...
 	{
 		threads = cpunum;
 	}
-	else threads = 1;                                //otherwise, run just one.
-
+	else
+	{
+		threads = 1;                                //otherwise, run just one.
+	}
 	for (thnum = 0; thnum < threads; thnum++) {           //for each thread...
 		threaddat = (struct thdat*)HeapAlloc(GetProcessHeap(), 0, ThreadDataSize + 16);//get some memory
 		threaddat->threadnum = thnum;                              //tell it its name
@@ -361,7 +365,8 @@ void calc_start(HWND hwnd)
 	if (PR_OPT == PR_AUTO)
 		SetThreadPriority((HANDLE)_beginthreadex(NULL, 0, cpu_free_time,
 			NULL, 0, (unsigned*)&cftblah), 2);
-	else thrdpr = PR_OPT - PR_4;
+	else 
+		thrdpr = PR_OPT - PR_4;
 }
 
 void calc_end(HWND hwnd)
@@ -372,7 +377,8 @@ void calc_end(HWND hwnd)
 	EnableMenuItem(GetMenu(hwnd), MENU_START, MF_ENABLED);
 	EnableMenuItem(GetMenu(hwnd), MENU_STOP, MF_GRAYED);
 
-	if (threadsactive == 0) return;        //if there's nothing to stop, exit
+	if (threadsactive == 0)
+		return;        //if there's nothing to stop, exit
 
 	cont = FALSE;                          //tell threads to exit.
 
@@ -390,7 +396,9 @@ void calc_end(HWND hwnd)
 	}   //set all the threads to highest priority, so that it will finish
 		//even if some other programs are sucking up CPU cycles.
 
-	do Sleep(0); while (threadsactive);
+	do
+		Sleep(0);
+	while (threadsactive);
 
 
 	//wait for all threads to finish
@@ -440,9 +448,14 @@ void tray_message(UINT message, LPCSTR prompt, HWND hwnd, UINT Icon)
 	notify_data.hIcon = LoadIcon((HINSTANCE)AppInst, MAKEINTRESOURCE(Icon));
 
 	if ((!Shell_NotifyIcon(message, &notify_data)) && (message == NIM_ADD) && (!TrayTimer))
+	{
 		TrayTimer = SetTimer(hwnd, tTray, 1000, NULL);
-	else
-		if (TrayTimer) { KillTimer(hwnd, TrayTimer); TrayTimer = 0; }
+	}
+	else {
+		if (TrayTimer) {
+			KillTimer(hwnd, TrayTimer); TrayTimer = 0;
+		}
+	}
 }
 
 BOOL PASCAL about_message_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -454,7 +467,7 @@ BOOL PASCAL about_message_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
 		EndDialog(hwnd, TRUE);
 		return(TRUE);
 	}
-				   break;
+	break;
 	}
 	return (FALSE);
 }
@@ -498,7 +511,7 @@ long process_message(char* dat)
 	float time = 0.0f;
 	FILE* f = NULL;
 
-	if (strncmp(dat, "HTTP", 4) == 0)
+	if (0 == strncmp(dat, "HTTP", 4))
 	{
 		dat1 = strstr(dat, "\r\n\r\n");
 		if (dat1 != NULL) dat1 += 2;
@@ -545,18 +558,23 @@ long process_message(char* dat)
 			WritePrivateProfileString("Main", "rangesw", cbuf, IniFileName);
 		}
 		else
+		{
 			if (strncmp(dat1, "rtime", 5) == 0) {
 				sscanf(dat1 + 6, "%f", &time);
 				sprintf(cbuf, "%f", time * 8.382);
 				WritePrivateProfileString("Main", "rtime", cbuf, IniFileName);
 			}
-			else
+			else {
 				if (strncmp(dat1, "ignoreme", 8) == 0) {
 				}
 				else
+				{
 					if (strncmp(dat1, "OK", 2) != 0) {
 						OutputText(mainHwnd, "I don't understand what the server just told me, so I'll just ignore it.\nThis should never occur.\n");
-					};
+					}
+				}
+			}
+		}
 
 	return(0);
 }
@@ -573,10 +591,16 @@ void process_input(void)
 		if (strncmp(dat, "date", 4) == 0) {
 			// compare dates
 			sscanf(dat, "datetime,%d", &temp);
-			if (temp + 2 > high32_of_filetime("output.txt")) remove("output.txt");
+			if (temp + 2 > high32_of_filetime("output.txt"))
+			{
+				remove("output.txt");
+			}
 		}
-		else
-			if (strlen(dat) > 2) process_message(dat);
+		else {
+			if (strlen(dat) > 2) {
+				process_message(dat);
+			}
+		}
 	};
 	fclose(f);
 	remove("input.txt");
@@ -598,8 +622,6 @@ long check_modem_connection(void)
 	HINSTANCE hinstLib = NULL;
 	TRasEnumConnectionsA PRasEnumConnectionsA;
 	TRasGetConnectStatusA PRasGetConnectStatusA;
-
-
 	hinstLib = LoadLibrary("RASAPI32");
 
 	/* If the handle is valid, try to get the function address. */
@@ -607,7 +629,7 @@ long check_modem_connection(void)
 	if (hinstLib == NULL) {
 		OutputText(mainHwnd, "Could not load RAS DLL.\n");
 		return(0);
-	};
+	}
 
 	PRasEnumConnectionsA = (TRasEnumConnectionsA)GetProcAddress(hinstLib, "RasEnumConnectionsA");
 	PRasGetConnectStatusA = (TRasGetConnectStatusA)GetProcAddress(hinstLib, "RasGetConnectStatusA");
@@ -617,7 +639,7 @@ long check_modem_connection(void)
 	if ((PRasEnumConnectionsA == NULL) || (PRasGetConnectStatusA == NULL)) {
 		OutputText(mainHwnd, "Could not get RAS functions.\n");
 		return(0);
-	};
+	}
 
 	size = 0;
 	entrynum = 0;
@@ -633,12 +655,12 @@ long check_modem_connection(void)
 		OutputText(mainHwnd, "Error in RasEnumConnections.\nThis should never happen.\n");
 		sprintf(cbuf, "Error code: %d\n", temp);
 		OutputText(mainHwnd, cbuf);
-	};
+	}
 
 	if (entrynum == 0) {
 		OutputText(mainHwnd, "No active dial-up connection found.\n");
 		return(0);
-	};
+	}
 
 	status.dwSize = sizeof(RASCONNSTATUS);
 
@@ -649,7 +671,7 @@ long check_modem_connection(void)
 	if (status.rasconnstate == RASCS_Connected) {
 		//        OutputStr(mainHwnd,"Found active RAS connection!!!\n");
 		return(1);
-	};
+	}
 
 	OutputText(mainHwnd, "No active dial-up connection found.\n");
 	return(0);
@@ -678,13 +700,15 @@ long attempt_communication(void)
 		f = fopen("spool.txt", "rt");
 		g = fopen("output.txt", "at");
 		if ((f != NULL) && (g != NULL))
+		{
 			while (fgets(dat, 256, f) != NULL)
 			{
 				temp = computernum;
 				if (strncmp(dat, "newuser", 6) == 0) temp = -1;
 
 				fprintf(g, "%d,%s", temp, &dat);
-			};
+			}
+		}
 		fclose(f);
 		remove("spool.txt");
 
@@ -698,17 +722,18 @@ long attempt_communication(void)
 		return(0);
 	};
 
-	if (connectmethod / 2 == 1)
+	if (connectmethod / 2 == 1) {
 		if (check_modem_connection() == 0) {
 			return(120);
-		};
+		}
+	}
 
 	wVersionRequested = MAKEWORD(1, 1);
 	err = WSAStartup(wVersionRequested, &wsaData);
 	if (err != 0) {
 		OutputText(mainHwnd, "Winsock stack could not be found.\n");
 		return(1800);
-	};
+	}
 
 #ifdef DEBUG_INET
 	hp = malloc(sizeof(*hp));
@@ -729,15 +754,16 @@ long attempt_communication(void)
 			temp = inet_addr(proxyaddr);
 			hp = gethostbyaddr((char*)&temp, 4, PF_INET);
 		}
-		else
+		else {
 			hp = gethostbyname(proxyaddr);
+		}
 		sn.sin_port = htons(proxyport);
-	};
+	}
 
 	if (!hp) {
 		OutputText(mainHwnd, "PiHex server could not be found.\n");
 		return(1800);
-	};
+	}
 
 	sn.sin_family = hp->h_addrtype;
 
@@ -751,6 +777,7 @@ long attempt_communication(void)
 
 	f = fopen("spool.txt", "rt");
 	if (f != NULL)
+	{
 		while (fgets(dat, 256, f) != NULL)
 		{
 			if (*(dat + strlen(dat) - 1) == '\n') *(dat + strlen(dat) - 1) = 0;
@@ -821,6 +848,7 @@ long attempt_communication(void)
 				return(temp);
 			};
 		};
+	}
 
 #ifdef _DEBUG
 	fclose(g);
@@ -839,17 +867,17 @@ void spoolmsg(char* dat)
 	FILE* f = NULL;
 	char* x = NULL;
 
-	for (x = dat; *x != 0; x++) if (*x == ' ') *x = '_';
+	for (x = dat; *x != 0; x++) 
+		if (*x == ' ') *x = '_';
 
 	f = fopen("spool.txt", "at");
 	fprintf(f, dat);
 	fclose(f);
 }
 
-BOOL  PASCAL ProxyInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+BOOL PASCAL ProxyInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	char cbuf[128] = { 0 };
-
 	switch (msg) {
 	case WM_INITDIALOG:
 		SetDlgItemText(hwnd, PROXY_Edit, proxyaddr);
@@ -858,9 +886,9 @@ BOOL  PASCAL ProxyInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		return(TRUE);
 
 	case WM_COMMAND:
-		if (wParam == IDOK) {
+		if (wParam == IDOK) 
+		{
 			GetDlgItemText(hwnd, PROXY_Edit, proxyaddr, 128);
-
 			GetDlgItemText(hwnd, PORT_Edit, cbuf, 128);
 			sscanf(cbuf, "%d", &proxyport);
 
@@ -871,12 +899,12 @@ BOOL  PASCAL ProxyInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 			EndDialog(hwnd, TRUE);
 			return(TRUE);
-		};
+		}
 
 		if (wParam == IDCANCEL) {
 			EndDialog(hwnd, TRUE);
 			return(TRUE);
-		};
+		}
 		break;
 	}
 	return (FALSE);
@@ -898,16 +926,19 @@ BOOL  PASCAL CpuInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (cputype == 5) CheckDlgButton(hwnd, CT_I5, 1);
 			if (cputype == 6) CheckDlgButton(hwnd, CT_I6, 1);
 		}
-		else
+		else {
 			if (cpuvendor == CPU_AMD) {
 				if (cputype == 5) CheckDlgButton(hwnd, CT_A5, 1);
 				if (cputype == 6) CheckDlgButton(hwnd, CT_A6, 1);
 			}
 			else
-				if (cpuvendor == CPU_CYRIX) CheckDlgButton(hwnd, CT_C6, 1);
+			{
+				if (cpuvendor == CPU_CYRIX)
+					CheckDlgButton(hwnd, CT_C6, 1);
 				else
 					CheckDlgButton(hwnd, CT_I4, 1);
-
+			}
+		}
 		sprintf(cbuf, "%d", cpuspeed);
 		SetDlgItemText(hwnd, CSPEED_Edit, cbuf);
 
@@ -917,14 +948,15 @@ BOOL  PASCAL CpuInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (connectmethod % 2 == 0) {
 			CheckDlgButton(hwnd, PROXY_Check, 0);
 		}
-		else CheckDlgButton(hwnd, PROXY_Check, 1);
-
+		else {
+			CheckDlgButton(hwnd, PROXY_Check, 1);
+		}
 		if (connectmethod / 2 == 0) CheckDlgButton(hwnd, CM_NET, 1);
 		else if (connectmethod / 2 == 1) CheckDlgButton(hwnd, CM_DIAL, 1);
 		else {
 			CheckDlgButton(hwnd, CM_SNEAK, 1);
 			CheckDlgButton(hwnd, PROXY_Check, 0);
-		};
+		}
 
 		sprintf(cbuf, "%4.1f", hoursworkperday);
 		SetDlgItemText(hwnd, CHOURS_Edit, cbuf);
@@ -942,7 +974,7 @@ BOOL  PASCAL CpuInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			lpProc = (DLGPROC)MakeProcInstance(ProxyInfo, hInst);
 			DialogBox((HINSTANCE)AppInst, MAKEINTRESOURCE(PROXYINFOBOX), hwnd, lpProc);
 			return(TRUE);
-		};
+		}
 
 		if (wParam == IDOK) {
 			GetDlgItemText(hwnd, UNAME_Edit, UserName, 75);
@@ -998,11 +1030,11 @@ BOOL  PASCAL CpuInfo(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 			EndDialog(hwnd, TRUE);
 			return(TRUE);
-		};
+		}
 		if (wParam == IDCANCEL) {
 			EndDialog(hwnd, FALSE);
 			return(TRUE);
-		};
+		}
 		break;
 	}
 	return (FALSE);
@@ -1019,7 +1051,7 @@ int CreateUserInfoWindow()
 	if (DialogBox(AppInst, MAKEINTRESOURCE(CPUINFOBOX), mainHwnd, lpProc) == FALSE) {
 		FreeProcInstance(lpProc);
 		return(-1);
-	};
+	}
 
 	FreeProcInstance(lpProc);
 
@@ -1039,7 +1071,6 @@ int CreateUserInfoWindow()
 void GetCPUDat(void)
 {
 	LARGE_INTEGER int64 = { 0 };
-
 	SYSTEM_INFO sysinf = { 0 };
 	double TSCstart = 0.0, TSCend = 0.0;
 	double startcount = 0.0, endcount = 0.0;
@@ -1069,13 +1100,14 @@ void GetCPUDat(void)
 	for (;;) {
 		QueryPerformanceCounter(&int64);
 		endcount = int64.QuadPart;// fild();
-		if (endcount > startcount + max(5000, freq / 20)) break;
-	};
+		if (endcount > startcount + max(5000, freq / 20))
+			break;
+	}
 
 	TSCend = __rdtsc();
 
 	cpuspeed = (TSCend - TSCstart) * freq / (endcount - startcount) / 1000000;
-};
+}
 
 void NewUserAuto()
 {
@@ -1097,14 +1129,15 @@ void NewUserAuto()
 	spoolmsg(cbuf);
 }
 
-long compaftercomm;
+long compaftercomm = 0;
 
-unsigned __stdcall commthread(void* junk)
+unsigned int PASCAL commthread(void* junk)
 {
 	long delay = 0;
 	char str[256] = { 0 };
 
-	if (connectmethod < 4) OutputText(mainHwnd, "Attempting to communicate with server\n");
+	if (connectmethod < 4)
+		OutputText(mainHwnd, "Attempting to communicate with server\n");
 
 	for (;;) {
 		delay = attempt_communication();
@@ -1174,7 +1207,8 @@ void JoinPiHex(void)
 	//  2.  If CNUW succeeded, then communicate
 	//  3.  Once communication is done, start computing
 
-	if (joined == -1) NewUserAuto();
+	if (joined == -1) 
+		NewUserAuto();
 	else
 	{
 		GetCPUDat();
@@ -1184,8 +1218,8 @@ void JoinPiHex(void)
 			EnableMenuItem(GetMenu(mainHwnd), MENU_QUIT, MF_GRAYED);
 
 			return;
-		};
-	};
+		}
+	}
 
 	joined = 1;
 	WritePrivateProfileString("Main", "joined", "1", IniFileName);
@@ -1222,8 +1256,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	case WM_COMMAND:
 		switch (LOWORD(wparam)) {
 		case MENU_START:
-			if (joined < 1) JoinPiHex();
-			else calc_start(hwnd);
+			if (joined < 1)
+				JoinPiHex();
+			else
+				calc_start(hwnd);
 			return(0);
 		case MENU_STOP:
 			calc_end(hwnd);
@@ -1319,7 +1355,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				ShowWindow(hwnd, SW_HIDE);
 				SetForegroundWindow(hwnd);
 			}
-			else ShowWindow(hwnd, SW_RESTORE);
+			else
+			{
+				ShowWindow(hwnd, SW_RESTORE);
+			}
 		}
 		return(0);
 
@@ -1328,45 +1367,47 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			ShowWindow(hwnd, SW_HIDE);
 			return(0);
-		};
+		}
 		break;
 
 		//Taken from prime.exe
 		//I have no idea how this works
 	case WM_PAINT: {
 		PAINTSTRUCT ps = { 0 };
-		RECT    r = { 0 };
-		int     y = 0;
-		int     i = 0;
+		RECT r = { 0 };
+		int y = 0;
+		int i = 0;
 		HDC hdc = NULL;
 		hdc = BeginPaint(hwnd, &ps);
 		GetClientRect(hwnd, &r);
 		if (Lines[0] != NULL)
+		{
 			for (y = r.bottom, i = 1; y > 0 && i < NumLines; i++) {
 				y -= CharHeight;
 				TextOut(hdc, 0, y, Lines[i], strlen(Lines[i]));
 			}
+		}
 		EndPaint(hwnd, &ps);
 		return(0);
 	}
 
 	case WM_CREATE:
-
+	{
 		GetPrivateProfileString("Main", "Window", "", achBuf, 40, IniFileName);
 		if (strlen(achBuf) != 0) {
 			sscanf(achBuf, "%d,%d,%d,%d", &rect.left, &rect.right, &rect.top, &rect.bottom);
 			MoveWindow(hwnd, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, FALSE);
-		};
+		}
 
 		mainHwnd = hwnd;
-
 		service = GetPrivateProfileInt("Main", "Service", 0, IniFileName);
 		set_registry();
-		if (service) make_service_win95();
-
+		if (service) {
+			make_service_win95();
+		}
 		TRAY_ICON = GetPrivateProfileInt("Main", "Trayicon", 8, IniFileName);
 		NO_ICON = GetPrivateProfileInt("Main", "Noicon", 0, IniFileName);
-		AUTO_CONT = GetPrivateProfileInt("Main", "Autocontinue", 8, IniFileName);
+		AUTO_CONT = GetPrivateProfileInt("Main", "Autocontinue", 0, IniFileName);
 		joined = GetPrivateProfileInt("Main", "Joined", 0, IniFileName);
 
 		GetPrivateProfileString("Main", "hoursperday", "24.0", Useremail, 128, IniFileName);
@@ -1398,7 +1439,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		GetPrivateProfileString("Main", "Priority", "Auto", achBuf, 40, IniFileName);
 		if (strcmp(achBuf, "Auto"))
 			PR_OPT = 100 + GetPrivateProfileInt("Main", "Priority", PR_AUTO - 100, IniFileName);
-		else PR_OPT = PR_AUTO;
+		else
+			PR_OPT = PR_AUTO;
 
 		CheckMenuItem(GetMenu(hwnd), MENU_NOTRAY, NO_ICON);
 		CheckMenuItem(GetMenu(hwnd), MENU_TRAY, TRAY_ICON);
@@ -1416,11 +1458,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		//     follow operations as with main/joined=0 at startup.
 
 		if (joined < 1) {
-			if (joined == 0) ShowWindow(hwnd, SW_SHOW);
-			else ShowWindow(hwnd, SW_HIDE);
+			if (joined == 0)
+				ShowWindow(hwnd, SW_SHOW);
+			else
+				ShowWindow(hwnd, SW_HIDE);
 			JoinPiHex();
 		}
 		else
+		{
 			if (AUTO_CONT)
 			{
 				EnableMenuItem(GetMenu(hwnd), MENU_JOIN, MF_GRAYED);
@@ -1428,27 +1473,35 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				if (!GetSystemPowerStatus(&powstat)) calc_start(hwnd);
 				// If we can't get the Power Status (eg, NT4.0, where the function is not
 				// implemented) start anyway.
-				else
+				else {
 					if ((powstat.BatteryLifePercent > 75) && (powstat.ACLineStatus > 0))
 						calc_start(hwnd);
-				if (TRAY_ICON || NO_ICON) ShowWindow(hwnd, SW_HIDE);
-				else ShowWindow(hwnd, SW_SHOW);
+				}
+				if (TRAY_ICON || NO_ICON)
+					ShowWindow(hwnd, SW_HIDE);
+				else
+					ShowWindow(hwnd, SW_SHOW);
 			}
 			else {
 				ShowWindow(hwnd, SW_SHOW);
 				EnableMenuItem(GetMenu(hwnd), MENU_START, MF_ENABLED);
 				EnableMenuItem(GetMenu(hwnd), MENU_STOP, MF_GRAYED);
-			};
+			}
+		}
 		return(0);
 
 		// Very important: When the user shuts down the machine, programs are NOT
 		// asked to exit -- we need to make sure we save our data!
+	}
 	case WM_ENDSESSION:
-		if (wparam) goto done;
+	{
+		if (wparam)
+			goto done;
 		return(0);
-
+	}
 	case WM_DESTROY:
-	done:   
+	{
+	done:
 		if (threadsactive) calc_end(hwnd);
 		sprintf(achBuf, "%d", NO_ICON);
 		WritePrivateProfileString("Main", "Noicon", achBuf, IniFileName);
@@ -1461,14 +1514,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		sprintf(achBuf, "%d", PR_OPT - 100);
 		if (PR_OPT == PR_AUTO)
 			WritePrivateProfileString("Main", "Priority", "Auto", IniFileName);
-		else WritePrivateProfileString("Main", "Priority", achBuf, IniFileName);
-		if (TRAY_ICON) tray_message(NIM_DELETE, AppName, hwnd, AppIcon);
+		else
+			WritePrivateProfileString("Main", "Priority", achBuf, IniFileName);
+
+		if (TRAY_ICON)
+			tray_message(NIM_DELETE, AppName, hwnd, AppIcon);
 
 		GetWindowRect(hwnd, &rect);
 		sprintf(achBuf, "%d,%d,%d,%d", rect.left, rect.right, rect.top, rect.bottom);
-		if ((rect.left > 0) && (rect.left < 3000)) WritePrivateProfileString("Main", "Window", achBuf, IniFileName);
-
+		if ((rect.left > 0) && (rect.left < 3000))
+			WritePrivateProfileString("Main", "Window", achBuf, IniFileName);
 		PostQuitMessage(0);
+	}
 	}
 	return(DefWindowProc(hwnd, msg, wparam, lparam));
 }
@@ -1492,21 +1549,25 @@ void Findini(void)
 	GetWindowsDirectory(dir, 128);
 	sprintf(winfname, "%s\\%s", dir, iniName);
 
-	if (GetPrivateProfileInt("Main", "Trayicon", 77, curfname) == 77) {
+	if (GetPrivateProfileInt("Main", "Trayicon", 77, curfname) == 77) 
+	{
 		if (GetPrivateProfileInt("Main", "Trayicon", 77, winfname) != 77)
 		{
 			f = fopen(winfname, "rt");
 			do
 			{
 				fgets(s, 80, f);
-				if (s[0] == '[') sscanf(s, "[%[^]]", sect);
-				else
+				if (s[0] == '[') {
+					sscanf(s, "[%[^]]", sect);
+				}
+				else {
 					if ((tempc = strstr(s, "=")) != NULL)
 					{
 						(*tempc) = 0;
 						GetPrivateProfileString(sect, s, "", value, 80, winfname);
 						WritePrivateProfileString(sect, s, value, curfname);
-					};
+					}
+				}
 			} while (!feof(f));
 			fclose(f);
 			remove(winfname);
@@ -1525,23 +1586,29 @@ void Findini(void)
 			do
 			{
 				fgets(s, 80, f);
-				if (s[0] == '[') sscanf(s, "[%[^]]", sect);
+				if (s[0] == '[')
+				{
+					sscanf(s, "[%[^]]", sect);
+				}
 				else
+				{
 					if ((tempc = strstr(s, "=")) != NULL)
 					{
 						(*tempc) = 0;
 						GetPrivateProfileString(sect, s, "", value, 80, winfname);
 						WritePrivateProfileString(sect, s, value, curfname);
-					};
+					}
+				}
 			} while (!feof(f));
 			fclose(f);
 			remove(winfname);
-		};
-	};
+		}
+	}
 
 	sprintf(IniFileName, "%s", curfname);
 
 	if (GetPrivateProfileInt("Main", "PiHexVer", 510, IniFileName) == 510)
+	{
 		if (GetPrivateProfileInt("Main", "Autocom", 666, IniFileName) == 666) {
 			// This really was version 5.10 or earlier
 
@@ -1551,12 +1618,12 @@ void Findini(void)
 			if (f != NULL) {
 				while (fgets(s, 256, f) != NULL) fprintf(g, "output,%s", s);
 				fclose(f); remove("output0.txt");
-			};
+			}
 			f = fopen("output1.txt", "rt");
 			if (f != NULL) {
 				while (fgets(s, 256, f) != NULL) fprintf(g, "output,%s", s);
 				fclose(f); remove("output1.txt");
-			};
+			}
 			fclose(g);
 
 			// kill the range that the computer was working on.
@@ -1576,9 +1643,9 @@ void Findini(void)
 			for (temp = 0; temp < 150; temp++) {
 				sprintf(s, "range%d.ini", temp);
 				remove(s);
-			};
+			}
 		}
-
+	}
 	WritePrivateProfileString("Main", "PiHexVer", "600", IniFileName);
 }
 
@@ -1603,19 +1670,23 @@ void set_registry(void)
 void make_service_win95(void)
 {
 	HMODULE hlib = NULL;
-	DWORD (__stdcall * proc)(DWORD, DWORD);
+	DWORD(PASCAL * proc)(DWORD, DWORD);
 	DWORD rc = 0;
 
 	/* Call RegisterServiceProcess in the Kernel */
 
 	hlib = LoadLibrary("KERNEL32.DLL");
 	if (!hlib) { OutputText(mainHwnd, "Could not load KERNEL32.DLL\n"); return; };
-	proc = (DWORD(__stdcall*)(DWORD, DWORD)) GetProcAddress(hlib, "RegisterServiceProcess");
-	if (proc == NULL) OutputText(mainHwnd, "Unable to find RegisterServiceProcess\n");
+	proc = (DWORD(PASCAL*)(DWORD, DWORD)) GetProcAddress(hlib, "RegisterServiceProcess");
+	if (proc == NULL) 
+		OutputText(mainHwnd, "Unable to find RegisterServiceProcess\n");
 	else {
-		if (service) rc = (*proc)(0, 1);
-		else rc = (*proc)(0, 0);
-		if (!rc) OutputText(mainHwnd, "RegisterServiceProcess failed\n");
+		if (service) 
+			rc = (*proc)(0, 1);
+		else 
+			rc = (*proc)(0, 0);
+		if (!rc) 
+			OutputText(mainHwnd, "RegisterServiceProcess failed\n");
 	}
 	FreeLibrary(hlib);
 };
@@ -1626,17 +1697,18 @@ void make_service_win95(void)
 
 int WINAPI WinMain(HINSTANCE this_inst, HINSTANCE prev_inst, LPSTR cmdline, int cmdshow)
 {
-	MSG         msg = { 0 };
-	WNDCLASS    wc = { 0 };
-	HWND        hwnd = 0;
+	MSG msg = { 0 };
+	WNDCLASS wc = { 0 };
+	HWND hwnd = 0;
 
 	char cbuf[256] = { 0 };
 
-	GetModuleFileName(NULL, cbuf, 255);
+	GetModuleFileName(NULL, cbuf, sizeof(cbuf));
 	strrchr(cbuf, '\\')[1] = 0;
 	SetCurrentDirectory(cbuf);
 
-	if (strlen(cmdline) > 0) SetCurrentDirectory(cmdline);
+	if (strlen(cmdline) > 0)
+		SetCurrentDirectory(cmdline);
 
 	//  TODO 6.1: Add 'no icon' option.
 
@@ -1652,7 +1724,7 @@ int WINAPI WinMain(HINSTANCE this_inst, HINSTANCE prev_inst, LPSTR cmdline, int 
 	if (hwnd = FindWindow(AppClass, AppName)) {
 		ShowWindow(hwnd, SW_SHOW);
 		SetForegroundWindow(hwnd);
-		return(FALSE);
+		return FALSE;
 	};
 
 
@@ -1683,9 +1755,11 @@ int WINAPI WinMain(HINSTANCE this_inst, HINSTANCE prev_inst, LPSTR cmdline, int 
 	wc.lpszMenuName = MAKEINTRESOURCE(AppMenu);
 	wc.lpszClassName = AppClass;
 
-	if (!RegisterClass(&wc)) return(FALSE);
-
-	hwnd = CreateWindow(
+	if (!RegisterClass(&wc))
+	{
+		return FALSE;
+	}
+	hwnd = CreateWindowA(
 		AppClass,             /* class */
 		AppName,                /* caption */
 		WS_OVERLAPPEDWINDOW,    /* style */
@@ -1699,8 +1773,10 @@ int WINAPI WinMain(HINSTANCE this_inst, HINSTANCE prev_inst, LPSTR cmdline, int 
 		NULL                    /* create parms */
 	);
 
-	if (!hwnd) return(FALSE);
-
+	if (!hwnd)
+	{
+		return FALSE;
+	}
 	UpdateWindow(hwnd);
 
 	while (GetMessage(&msg, NULL, 0, 0)) {
@@ -1717,8 +1793,7 @@ int WINAPI WinMain(HINSTANCE this_inst, HINSTANCE prev_inst, LPSTR cmdline, int 
 /*                      Output Text to Main Window                       */
 /*************************************************************************/
 
-void  PASCAL LineFeed(
-	HWND    hWnd)
+void PASCAL LineFeed(HWND hWnd)
 {
 	char* p = NULL;
 	SIZE s = { 0 };
@@ -1740,7 +1815,7 @@ void  PASCAL LineFeed(
 	UpdateWindow(hWnd);
 }
 
-void  PASCAL OutputText(
+void PASCAL OutputText(
 	HWND    hWnd,
 	LPSTR   str)
 {
