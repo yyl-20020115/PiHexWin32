@@ -264,7 +264,7 @@ void newrange(struct threaddat* dat)
 			, pisum1[3], pisum1[2], pisum1[1], pisum1[0]);
 
 		spool_message(outstr);
-	};
+	}
 
 	sprintf(Thname, "Thread%d", dat->threadnum);
 
@@ -278,7 +278,7 @@ void newrange(struct threaddat* dat)
 		sscanf(cBuf, "%f", &idealtime);
 		cav = cav * idealtime;
 		if (idealtime > 0) update_hours(cav);
-	};
+	}
 
 	mcp = GetPrivateProfileInt(Thname, "lastr", 0, IniFileName);
 	if (mcp != 0) {
@@ -308,8 +308,8 @@ void newrange(struct threaddat* dat)
 			WritePrivateProfileString(Thname, "cur_pos", cBuf, IniFileName);
 			dat->threadnum = -1;
 			return;
-		};
-	};
+		}
+	}
 
 	dat->where[0] = where[0];
 	dat->where[1] = where[1];
@@ -451,7 +451,7 @@ void PASCAL calc_main_status(void)
 
 	if (error) { sprintf(calc_status, "%s", ErrMsg); calc_error = 1; return; };
 	calc_error = 0;
-};
+}
 
 void PASCAL calc_thread_done(LPVOID p)
 {
@@ -482,7 +482,7 @@ void PASCAL calc_thread_done(LPVOID p)
 			, pisum1[3], pisum1[2], pisum1[1], pisum1[0]);
 
 		spool_message(outstr);
-	};
+	}
 
 	sprintf(Thname, "Thread%d", dat->threadnum);
 
@@ -490,7 +490,7 @@ void PASCAL calc_thread_done(LPVOID p)
 	WritePrivateProfileString(Thname, "cur_pos", cBuf, IniFileName);
 
 	LeaveCriticalSection(&not_calculating);
-};
+}
 
 void PASCAL calc_main_done(void)
 {
